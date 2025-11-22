@@ -138,7 +138,7 @@ const ProductsList: React.FC = () => {
 
                     <Button
                         onClick={() => navigate("/products/create")}
-                        className="bg-blue-600 hover:bg-blue-700 shadow"
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         New Product
@@ -157,7 +157,7 @@ const ProductsList: React.FC = () => {
                                     placeholder="Search products..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
+                                    className="pl-10 bg-white border-gray-300 focus:ring-blue-500"
                                 />
                             </div>
 
@@ -165,7 +165,7 @@ const ProductsList: React.FC = () => {
                             <div className="flex items-center gap-3">
 
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                    <SelectTrigger className="w-40">
+                                    <SelectTrigger className="w-40 bg-white border-gray-300">
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -180,7 +180,7 @@ const ProductsList: React.FC = () => {
                                     value={categoryFilter}
                                     onValueChange={setCategoryFilter}
                                 >
-                                    <SelectTrigger className="w-40">
+                                    <SelectTrigger className="w-40 bg-white border-gray-300">
                                         <SelectValue placeholder="Category" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -201,8 +201,8 @@ const ProductsList: React.FC = () => {
                     {/* TABLE */}
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-max">
-                                <thead className="bg-gray-50 border-b">
+                            <table className="w-full min-w-max divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3">
                                             <Checkbox
@@ -226,7 +226,7 @@ const ProductsList: React.FC = () => {
                                         ].map((head) => (
                                             <th
                                                 key={head}
-                                                className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide"
+                                                className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider"
                                             >
                                                 {head}
                                             </th>
@@ -234,11 +234,11 @@ const ProductsList: React.FC = () => {
                                     </tr>
                                 </thead>
 
-                                <tbody className="divide-y">
+                                <tbody className="bg-white divide-y divide-gray-200">
                                     {filteredProducts.map((p) => (
                                         <tr
                                             key={p.id}
-                                            className="hover:bg-gray-50 transition cursor-pointer"
+                                            className="hover:bg-gray-50 transition-colors cursor-pointer"
                                             onClick={() => navigate(`/products/${p.id}`)}
                                         >
                                             <td
@@ -253,16 +253,15 @@ const ProductsList: React.FC = () => {
                                                 />
                                             </td>
 
-                                            <td className="px-6 py-3 font-medium">{p.sku}</td>
-                                            <td className="px-6 py-3">{p.name}</td>
-                                            <td className="px-6 py-3">{p.category}</td>
-                                            <td className="px-6 py-3">{p.uom}</td>
-                                            <td className="px-6 py-3 font-semibold">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{p.sku}</td>
+                                            <td className="px-6 py-4 text-gray-700">{p.name}</td>
+                                            <td className="px-6 py-4 text-gray-600">{p.category}</td>
+                                            <td className="px-6 py-4 text-gray-600">{p.uom}</td>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">
                                                 {p.availableStock}
                                             </td>
-                                            <td className="px-6 py-3">{p.reorderLevel}</td>
-
-                                            <td className="px-6 py-3">
+                                            <td className="px-6 py-4 text-gray-600">{p.reorderLevel}</td>
+                                            <td className="px-6 py-4">
                                                 <Badge className={`${statusColor(p.status)} px-3 py-1`}>
                                                     {p.status}
                                                 </Badge>
@@ -274,7 +273,7 @@ const ProductsList: React.FC = () => {
                                             >
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>

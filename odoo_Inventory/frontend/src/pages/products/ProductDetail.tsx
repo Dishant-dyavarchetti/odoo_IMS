@@ -1,407 +1,484 @@
-import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
 import {
+    Package,
+    TrendingUp,
+    TrendingDown,
+    User,
+    Menu,
+    Search,
+    Bell,
+    LogOut,
+    LayoutGrid,
+    Archive,
     ArrowLeft,
     Edit,
     Trash2,
-    Package,
-    TrendingUp,
     MapPin,
-} from 'lucide-react';
-import DashboardLayout from '@/components/DashboardLayout';
+} from "lucide-react";
 
-// Mock data
+
+// MOCK PRODUCT DATA
 const productData = {
-    id: '1',
-    sku: 'INV-001',
-    name: 'Inverter',
-    description: 'High quality inverter for residential and commercial use',
-    category: 'Electronics',
-    manufacturer: 'XYZ Corp',
-    barcode: '123456789',
-    uom: 'Unit',
+    id: "1",
+    sku: "INV-001",
+    name: "Inverter",
+    description: "High quality inverter for residential and commercial use",
+    category: "Electronics",
+    manufacturer: "XYZ Corp",
+    barcode: "123456789",
+    uom: "Unit",
     unitPrice: 5000,
     reorderLevel: 20,
     minStock: 10,
     maxStock: 200,
     totalStock: 80,
-    status: 'Active',
-    createdAt: 'Nov 15, 2024',
-    updatedAt: 'Nov 20, 2024',
+    status: "Active",
+    createdAt: "Nov 15, 2024",
+    updatedAt: "Nov 20, 2024",
 };
 
 const stockByLocation = [
-    { location: 'Warehouse A - Zone 1', quantity: 45, status: 'Available' },
-    { location: 'Warehouse A - Zone 2', quantity: 20, status: 'Available' },
-    { location: 'Warehouse B - Zone 1', quantity: 15, status: 'Reserved' },
-    { location: 'Store Location', quantity: 0, status: 'Out of Stock' },
+    { location: "Warehouse A - Zone 1", quantity: 45, status: "Available" },
+    { location: "Warehouse A - Zone 2", quantity: 20, status: "Available" },
+    { location: "Warehouse B - Zone 1", quantity: 15, status: "Reserved" },
+    { location: "Store Location", quantity: 0, status: "Out of Stock" },
 ];
 
 const stockMovements = [
     {
-        id: 'MOV001',
-        date: '2024-11-22',
-        type: 'Receipt',
+        id: "MOV001",
+        date: "2024-11-22",
+        type: "Receipt",
         quantity: 50,
-        location: 'Warehouse A',
-        reference: 'PO-12345',
+        location: "Warehouse A",
+        reference: "PO-12345",
     },
     {
-        id: 'MOV002',
-        date: '2024-11-21',
-        type: 'Delivery',
+        id: "MOV002",
+        date: "2024-11-21",
+        type: "Delivery",
         quantity: -30,
-        location: 'Warehouse A',
-        reference: 'SO-67890',
+        location: "Warehouse A",
+        reference: "SO-67890",
     },
     {
-        id: 'MOV003',
-        date: '2024-11-20',
-        type: 'Internal Transfer',
+        id: "MOV003",
+        date: "2024-11-20",
+        type: "Internal Transfer",
         quantity: 15,
-        location: 'Warehouse B',
-        reference: 'IT-45678',
+        location: "Warehouse B",
+        reference: "IT-45678",
     },
     {
-        id: 'MOV004',
-        date: '2024-11-19',
-        type: 'Adjustment',
+        id: "MOV004",
+        date: "2024-11-19",
+        type: "Adjustment",
         quantity: -5,
-        location: 'Warehouse A',
-        reference: 'ADJ-11111',
+        location: "Warehouse A",
+        reference: "ADJ-11111",
     },
     {
-        id: 'MOV005',
-        date: '2024-11-18',
-        type: 'Receipt',
+        id: "MOV005",
+        date: "2024-11-18",
+        type: "Receipt",
         quantity: 100,
-        location: 'Warehouse A',
-        reference: 'PO-12340',
+        location: "Warehouse A",
+        reference: "PO-12340",
     },
 ];
 
+
+// ----------------------------
+// MAIN COMPONENT
+// ----------------------------
 const ProductDetail: React.FC = () => {
+
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
+
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const menuItems = [
+        { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
+        { label: "In Stock", path: "/stock", icon: Archive },
+        { label: "Products", path: "/products", icon: Package },
+        { label: "Sales", path: "/sales", icon: TrendingUp },
+        { label: "Orders", path: "/orders", icon: TrendingDown },
+        { label: "Users", path: "/users", icon: User },
+    ];
 
     const getMovementColor = (type: string) => {
         switch (type) {
-            case 'Receipt':
-                return 'text-green-600';
-            case 'Delivery':
-                return 'text-red-600';
-            case 'Internal Transfer':
-                return 'text-blue-600';
-            case 'Adjustment':
-                return 'text-yellow-600';
-            default:
-                return 'text-gray-600';
+            case "Receipt": return "text-green-600";
+            case "Delivery": return "text-red-600";
+            case "Internal Transfer": return "text-blue-600";
+            case "Adjustment": return "text-yellow-600";
+            default: return "text-gray-600";
         }
     };
 
     const getLocationStatusColor = (status: string) => {
         switch (status) {
-            case 'Available':
-                return 'bg-green-500';
-            case 'Reserved':
-                return 'bg-yellow-500';
-            case 'Out of Stock':
-                return 'bg-red-500';
-            default:
-                return 'bg-gray-500';
+            case "Available": return "bg-green-500";
+            case "Reserved": return "bg-yellow-500";
+            case "Out of Stock": return "bg-red-500";
+            default: return "bg-gray-500";
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem("authToken");
+        navigate("/login");
+    };
+
     return (
-        <DashboardLayout>
-            <div className="p-6">
-                {/* Header */}
-                <div className="mb-6">
+        <div className="min-h-screen bg-gray-50 flex">
+
+            {/* SIDEBAR */}
+            <aside
+                className={`h-screen bg-[#1e293b] text-white transition-all duration-300 
+                ${sidebarOpen ? "w-64" : "w-20"}`}
+            >
+                <div className="p-4 flex items-center justify-center h-16 border-b border-gray-700">
+                    {sidebarOpen ? (
+                        <h2 className="text-xl font-bold">Inventory</h2>
+                    ) : (
+                        <Package className="w-8 h-8" />
+                    )}
+                </div>
+
+                <nav className="mt-8 space-y-2 px-3">
+                    {menuItems.map((item, index) => {
+                        const active = location.pathname.startsWith(item.path);
+                        const Icon = item.icon;
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => navigate(item.path)}
+                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition
+                                ${active ? "bg-gray-700" : "hover:bg-gray-700"}`}
+                            >
+                                <Icon className="w-5 h-5" />
+                                {sidebarOpen && <span>{item.label}</span>}
+                            </button>
+                        );
+                    })}
+                </nav>
+            </aside>
+
+
+            {/* MAIN CONTENT */}
+            <div className="flex-1 w-full">
+
+                {/* HEADER */}
+                <header className="bg-white border-b h-16 px-6 flex items-center justify-between sticky top-0 z-30">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+
+                        <span className="text-gray-500 capitalize">
+                            {location.pathname.split("/")[1] || "Dashboard"}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="relative w-72">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <Input className="pl-10 bg-white border-gray-300" placeholder="Search..." />
+                        </div>
+
+                        <button className="relative p-2 hover:bg-gray-100 rounded-lg">
+                            <Bell className="w-5 h-5" />
+                            <span className="w-2 h-2 bg-red-500 absolute top-1 right-1 rounded-full"></span>
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                            <img
+                                className="w-8 h-8 rounded-full"
+                                src="https://ui-avatars.com/api/?name=Ann+Lee&background=6366f1&color=fff"
+                            />
+                            <span>Ann Lee</span>
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            onClick={handleLogout}
+                            className="text-red-600 hover:bg-red-50"
+                        >
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Logout
+                        </Button>
+                    </div>
+                </header>
+
+
+                {/* PAGE CONTENT */}
+                <main className="p-6">
+
+                    {/* Back Button */}
                     <Button
                         variant="ghost"
-                        onClick={() => navigate('/products')}
-                        className="mb-4"
+                        onClick={() => navigate("/products")}
+                        className="mb-6"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Products
                     </Button>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between mb-6">
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <h1 className="text-3xl font-bold text-gray-900">{productData.name}</h1>
-                                <Badge className="bg-green-500">Active</Badge>
-                            </div>
+                            <h1 className="text-3xl font-bold">{productData.name}</h1>
                             <p className="text-gray-500">SKU: {productData.sku}</p>
                         </div>
 
                         <div className="flex gap-2">
-                            <Button
-                                onClick={() => navigate(`/products/${id}/edit`)}
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Product
+                            <Button onClick={() => navigate(`/products/${id}/edit`)}>
+                                <Edit className="w-4 h-4 mr-2" /> Edit
                             </Button>
-                            <Button variant="outline" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                            <Button variant="outline" className="text-red-600">
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </Button>
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Product Details */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Product Information</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Product Name</p>
-                                        <p className="font-medium">{productData.name}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">SKU</p>
-                                        <p className="font-medium">{productData.sku}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Category</p>
-                                        <p className="font-medium">{productData.category}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Manufacturer</p>
-                                        <p className="font-medium">{productData.manufacturer}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Barcode</p>
-                                        <p className="font-medium">{productData.barcode}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Unit of Measure</p>
-                                        <p className="font-medium">{productData.uom}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-sm text-gray-500 mb-1">Description</p>
-                                        <p className="font-medium">{productData.description}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {/* GRID */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                        {/* Stock by Location */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <MapPin className="w-5 h-5" />
-                                    Stock by Location
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 border-b">
+                        {/* LEFT SIDE CONTENT */}
+                        <div className="lg:col-span-2 space-y-6">
+
+                            {/* PRODUCT INFO */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Product Information</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <p className="text-sm text-gray-500">Product Name</p>
+                                            <p>{productData.name}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">SKU</p>
+                                            <p>{productData.sku}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">Category</p>
+                                            <p>{productData.category}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">Manufacturer</p>
+                                            <p>{productData.manufacturer}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">Barcode</p>
+                                            <p>{productData.barcode}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">Unit of Measure</p>
+                                            <p>{productData.uom}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-sm text-gray-500">Description</p>
+                                            <p>{productData.description}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+
+                            {/* STOCK BY LOCATION */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MapPin className="w-5 h-5" />
+                                        Stock by Location
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <table className="w-full text-left">
+                                        <thead className="border-b bg-gray-50">
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Location
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Quantity
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Status
-                                                </th>
+                                                <th className="px-4 py-2">Location</th>
+                                                <th className="px-4 py-2">Quantity</th>
+                                                <th className="px-4 py-2">Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {stockByLocation.map((location, index) => (
-                                                <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {location.location}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                                                        {location.quantity}
-                                                    </td>
+                                        <tbody>
+                                            {stockByLocation.map((item, idx) => (
+                                                <tr key={idx} className="border-b hover:bg-gray-50">
+                                                    <td className="px-4 py-3">{item.location}</td>
+                                                    <td className="px-4 py-3 font-semibold">{item.quantity}</td>
                                                     <td className="px-4 py-3">
-                                                        <Badge className={getLocationStatusColor(location.status)}>
-                                                            {location.status}
+                                                        <Badge className={getLocationStatusColor(item.status)}>
+                                                            {item.status}
                                                         </Badge>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
-                        {/* Stock Movement History */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Stock Movement History</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 border-b">
+
+                            {/* STOCK MOVEMENT HISTORY */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Stock Movement History</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <table className="w-full text-left">
+                                        <thead className="border-b bg-gray-50">
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Date
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Type
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Quantity
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Location
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                                                    Reference
-                                                </th>
+                                                <th className="px-4 py-2">Date</th>
+                                                <th className="px-4 py-2">Type</th>
+                                                <th className="px-4 py-2">Quantity</th>
+                                                <th className="px-4 py-2">Location</th>
+                                                <th className="px-4 py-2">Reference</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {stockMovements.map((movement) => (
-                                                <tr key={movement.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                                        {movement.date}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className={getMovementColor(movement.type)}>
-                                                            {movement.type}
-                                                        </span>
+                                        <tbody>
+                                            {stockMovements.map((move) => (
+                                                <tr key={move.id} className="border-b hover:bg-gray-50">
+                                                    <td className="px-4 py-3">{move.date}</td>
+                                                    <td className={`px-4 py-3 ${getMovementColor(move.type)}`}>
+                                                        {move.type}
                                                     </td>
                                                     <td
-                                                        className={`px-4 py-3 text-sm font-semibold ${movement.quantity > 0 ? 'text-green-600' : 'text-red-600'
-                                                            }`}
+                                                        className={`px-4 py-3 font-semibold ${move.quantity > 0 ? "text-green-600" : "text-red-600"}`}
                                                     >
-                                                        {movement.quantity > 0 ? '+' : ''}
-                                                        {movement.quantity}
+                                                        {move.quantity > 0 ? "+" : ""}{move.quantity}
                                                     </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                                        {movement.location}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                                        {movement.reference}
-                                                    </td>
+                                                    <td className="px-4 py-3">{move.location}</td>
+                                                    <td className="px-4 py-3">{move.reference}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                </CardContent>
+                            </Card>
 
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Stock Summary */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Stock Summary</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                                    <div className="flex items-center gap-3">
+                        </div>
+
+
+                        {/* RIGHT SIDE SUMMARY */}
+                        <div className="space-y-6">
+
+                            {/* STOCK SUMMARY */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Stock Summary</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+
+                                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
                                         <Package className="w-8 h-8 text-blue-600" />
                                         <div>
                                             <p className="text-sm text-gray-600">Total Stock</p>
-                                            <p className="text-2xl font-bold text-gray-900">
-                                                {productData.totalStock}
+                                            <p className="text-2xl font-bold">{productData.totalStock}</p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-2">
+                                            <span className="text-gray-600">Unit Price</span>
+                                            <span>₹{productData.unitPrice}</span>
+                                        </div>
+
+                                        <div className="flex justify-between text-sm mb-2">
+                                            <span className="text-gray-600">Reorder Level</span>
+                                            <span>{productData.reorderLevel}</span>
+                                        </div>
+
+                                        <div className="flex justify-between text-sm mb-2">
+                                            <span className="text-gray-600">Min Stock</span>
+                                            <span>{productData.minStock}</span>
+                                        </div>
+
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">Max Stock</span>
+                                            <span>{productData.maxStock}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t">
+                                        <div className="flex justify-between font-semibold text-blue-600">
+                                            <span>Stock Value</span>
+                                            <span>₹{(productData.totalStock * productData.unitPrice).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+
+                                </CardContent>
+                            </Card>
+
+
+                            {/* REORDERING RULES */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Reordering Rules</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+
+                                    <div className="p-3 bg-green-50 rounded-lg flex items-start gap-3">
+                                        <TrendingUp className="w-5 h-5 text-green-600 mt-1" />
+                                        <div>
+                                            <p className="text-sm font-medium text-green-900">Stock Level Good</p>
+                                            <p className="text-xs text-green-700">
+                                                Current stock is above reorder level
                                             </p>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Unit Price</span>
-                                        <span className="font-semibold">₹{productData.unitPrice}</span>
+                                    <div className="text-sm text-gray-600">
+                                        <p>Rule: Alert when below {productData.reorderLevel} units</p>
+                                        <p>Suggested Reorder: {productData.maxStock - productData.totalStock} units</p>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Reorder Level</span>
-                                        <span className="font-semibold">{productData.reorderLevel}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Min Stock</span>
-                                        <span className="font-semibold">{productData.minStock}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Max Stock</span>
-                                        <span className="font-semibold">{productData.maxStock}</span>
-                                    </div>
-                                </div>
 
-                                <div className="pt-4 border-t">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm text-gray-600">Stock Value</span>
-                                        <span className="text-lg font-bold text-blue-600">
-                                            ₹{(productData.totalStock * productData.unitPrice).toLocaleString()}
-                                        </span>
+                                </CardContent>
+                            </Card>
+
+
+                            {/* METADATA */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Metadata</CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Created:</span>
+                                        <span>{productData.createdAt}</span>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Reordering Info */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Reordering Rules</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                                    <TrendingUp className="w-5 h-5 text-green-600 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-medium text-green-900">Stock Level Good</p>
-                                        <p className="text-xs text-green-700 mt-1">
-                                            Current stock is above reorder level
-                                        </p>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Last Updated:</span>
+                                        <span>{productData.updatedAt}</span>
                                     </div>
-                                </div>
+                                </CardContent>
+                            </Card>
 
-                                <div className="text-sm text-gray-600">
-                                    <p className="mb-1">
-                                        <strong>Rule:</strong> Alert when stock falls below {productData.reorderLevel}{' '}
-                                        units
-                                    </p>
-                                    <p>
-                                        <strong>Suggested Reorder Quantity:</strong>{' '}
-                                        {productData.maxStock - productData.totalStock} units
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        </div>
 
-                        {/* Metadata */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Metadata</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Created:</span>
-                                    <span className="font-medium">{productData.createdAt}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Last Updated:</span>
-                                    <span className="font-medium">{productData.updatedAt}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
-                </div>
+
+                </main>
+
             </div>
-        </DashboardLayout>
+
+        </div>
     );
 };
+
 
 export default ProductDetail;
