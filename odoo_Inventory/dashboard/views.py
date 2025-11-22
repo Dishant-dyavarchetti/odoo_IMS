@@ -2,6 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from django.db.models import Sum, Q, Count
+from django.utils import timezone
+from datetime import timedelta
 from products.models import Product
 from warehouse.models import StockQuant
 from receipts.models import Receipt
@@ -142,5 +144,122 @@ class StockLevelsByLocationView(APIView):
                 'reserved_quantity': str(quant.reserved_quantity),
                 'available_quantity': str(quant.available_quantity())
             })
+        
+        return Response(data)
+
+
+class MovementTrendsView(APIView):
+    """Movement trends over time"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """Get movement trends for the last 30 days"""
+        
+        days = int(request.query_params.get('days', 30))
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=days)
+        
+        movements = StockMovement.objects.filter(
+            created_at__gte=start_date
+        ).values('movement_type').annotate(
+            count=Count('id')
+        )
+        
+        # Get daily counts
+        daily_data = []
+        for i in range(days):
+            date = start_date + timedelta(days=i)
+            next_date = date + timedelta(days=1)
+            
+            day_movements = StockMovement.objects.filter(
+                created_at__gte=date,
+                created_at__lt=next_date
+            ).values('movement_type').annotate(count=Count('id'))
+            
+            receipts = sum(m['count'] for m in day_movements if m['movement_type'] == 'RECEIPT')
+            deliveries = sum(m['count'] for m in day_movements if m['movement_type'] == 'DELIVERY')
+            transfers = sum(m['count'] for m in day_movements if m['movement_type'] == 'TRANSFER')
+            adjustments = sum(m['count'] for m in day_movements if m['movement_type'] == 'ADJUSTMENT')
+            
+            daily_data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'receipts': receipts,
+                'deliveries': deliveries,
+                'transfers': transfers,
+                'adjustments': adjustments,
+                'total': receipts + deliveries + transfers + adjustments
+            })
+        
+        return Response(daily_data)
+
+
+class TopProductsView(APIView):
+    """Top products by movement"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """Get top products by movement"""
+        
+        limit = int(request.query_params.get('limit', 10))
+        days = int(request.query_params.get('days', 30))
+        
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get top products by movement count
+        top_products = StockMovement.objects.filter(
+            created_at__gte=start_date
+        ).values('product__name', 'product__sku').annotate(
+            movement_count=Count('id'),
+            total_quantity=Sum('quantity')
+        ).order_by('-movement_count')[:limit]
+        
+        data = []
+        for item in top_products:
+            data.append({
+                'name': item['product__name'],
+                'sku': item['product__sku'],
+                'movements': item['movement_count'],
+                'quantity': str(item['total_quantity'] or 0)
+            })
+        
+        return Response(data)
+
+
+class StockValueByCategoryView(APIView):
+    """Stock value grouped by category"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """Get stock value by category"""
+        
+        categories = {}
+        
+        for quant in StockQuant.objects.select_related('product', 'product__category').filter(quantity__gt=0):
+            category_name = quant.product.category.name if quant.product.category else 'Uncategorized'
+            
+            if category_name not in categories:
+                categories[category_name] = {
+                    'category': category_name,
+                    'value': 0,
+                    'quantity': 0,
+                    'products': 0
+                }
+            
+            value = float(quant.quantity) * float(quant.product.cost_price)
+            categories[category_name]['value'] += value
+            categories[category_name]['quantity'] += float(quant.quantity)
+            categories[category_name]['products'] += 1
+        
+        # Convert to list and sort by value
+        data = sorted(categories.values(), key=lambda x: x['value'], reverse=True)
+        
+        # Round values
+        for item in data:
+            item['value'] = round(item['value'], 2)
+            item['quantity'] = round(item['quantity'], 2)
         
         return Response(data)

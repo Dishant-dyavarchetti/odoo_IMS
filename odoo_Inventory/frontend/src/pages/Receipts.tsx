@@ -600,9 +600,10 @@ export default function Receipts() {
                       key={index}
                       className="grid grid-cols-12 gap-2 items-end p-3 bg-gray-50 rounded-md"
                     >
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <Label className="text-xs">Product</Label>
                         <Select
+                          key={`product-${index}-${line.product}`}
                           value={line.product}
                           onValueChange={(value) => {
                             const selectedProduct = products.find(p => p.id.toString() === value);
@@ -613,7 +614,12 @@ export default function Receipts() {
                           }}
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select product" />
+                            <SelectValue placeholder="Select product">
+                              {line.product && (() => {
+                                const p = products.find(prod => prod.id.toString() === line.product);
+                                return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
+                              })()}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (

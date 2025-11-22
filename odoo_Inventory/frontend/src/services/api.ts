@@ -135,6 +135,12 @@ export const dashboardAPI = {
     api.get('/dashboard/recent-movements/', { params }),
   getStockLevels: (params?: any) =>
     api.get('/dashboard/stock-levels/', { params }),
+  getMovementTrends: (params?: any) =>
+    api.get('/dashboard/movement-trends/', { params }),
+  getTopProducts: (params?: any) =>
+    api.get('/dashboard/top-products/', { params }),
+  getStockValueByCategory: () =>
+    api.get('/dashboard/stock-value-by-category/'),
 };
 
 // Stock Movements API

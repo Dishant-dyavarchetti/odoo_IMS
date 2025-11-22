@@ -88,6 +88,36 @@ export default function Deliveries() {
     notes: '',
     lines: [{ product: '', quantity: '', unit_price: '', notes: '' }],
   });
+  
+  const [stockValidationErrors, setStockValidationErrors] = useState<{[key: number]: string}>({});
+  
+  const validateStock = (productId: string, quantity: string, lineIndex: number) => {
+    const product = products.find(p => p.id.toString() === productId);
+    if (!product || !quantity) {
+      setStockValidationErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[lineIndex];
+        return newErrors;
+      });
+      return true;
+    }
+    
+    const qty = parseFloat(quantity);
+    if (qty > product.total_stock) {
+      setStockValidationErrors(prev => ({
+        ...prev,
+        [lineIndex]: `Insufficient stock! Available: ${product.total_stock} ${product.uom_abbreviation}`
+      }));
+      return false;
+    }
+    
+    setStockValidationErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[lineIndex];
+      return newErrors;
+    });
+    return true;
+  };
 
   useEffect(() => {
     fetchData();
@@ -205,6 +235,12 @@ export default function Deliveries() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for stock validation errors
+    if (Object.keys(stockValidationErrors).length > 0) {
+      toast.error('Please fix stock validation errors before submitting');
+      return;
+    }
     try {
       const payload = {
         delivery_number: formData.delivery_number,
@@ -620,10 +656,12 @@ export default function Deliveries() {
                           value={line.product}
                           onValueChange={(value) => {
                             const selectedProduct = products.find(p => p.id.toString() === value);
+                            console.log('Selected product:', selectedProduct);
                             updateItem(index, 'product', value);
                             if (selectedProduct) {
                               updateItem(index, 'unit_price', selectedProduct.selling_price.toString());
                             }
+                            validateStock(value, line.quantity, index);
                           }}
                         >
                           <SelectTrigger className="h-9">
@@ -644,12 +682,18 @@ export default function Deliveries() {
                           type="number"
                           step="0.01"
                           value={line.quantity}
-                          onChange={(e) =>
-                            updateItem(index, 'quantity', e.target.value)
-                          }
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          onChange={(e) => {
+                            updateItem(index, 'quantity', e.target.value);
+                            validateStock(line.product, e.target.value, index);
+                          }}
+                          className={`flex h-9 w-full rounded-md border px-2 py-1 text-sm ${
+                            stockValidationErrors[index] ? 'border-red-500 bg-red-50' : 'border-input bg-background'
+                          }`}
                           required
                         />
+                        {stockValidationErrors[index] && (
+                          <p className="text-xs text-red-600 mt-1">{stockValidationErrors[index]}</p>
+                        )}
                       </div>
                       <div className="col-span-3">
                         <Label className="text-xs">Unit Price</Label>

@@ -84,6 +84,36 @@ export default function Transfers() {
     notes: '',
     lines: [{ product: '', quantity: '', notes: '' }],
   });
+  
+  const [stockValidationErrors, setStockValidationErrors] = useState<{[key: number]: string}>({});
+  
+  const validateStock = (productId: string, quantity: string, lineIndex: number) => {
+    const product = products.find(p => p.id.toString() === productId);
+    if (!product || !quantity) {
+      setStockValidationErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[lineIndex];
+        return newErrors;
+      });
+      return true;
+    }
+    
+    const qty = parseFloat(quantity);
+    if (qty > product.total_stock) {
+      setStockValidationErrors(prev => ({
+        ...prev,
+        [lineIndex]: `Insufficient stock! Available: ${product.total_stock} ${product.uom_abbreviation}`
+      }));
+      return false;
+    }
+    
+    setStockValidationErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[lineIndex];
+      return newErrors;
+    });
+    return true;
+  };
 
   useEffect(() => {
     fetchData();
@@ -196,6 +226,12 @@ export default function Transfers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for stock validation errors
+    if (Object.keys(stockValidationErrors).length > 0) {
+      toast.error('Please fix stock validation errors before submitting');
+      return;
+    }
     try {
       const payload = {
         transfer_number: formData.transfer_number,
@@ -580,16 +616,23 @@ export default function Transfers() {
                       key={index}
                       className="grid grid-cols-12 gap-2 items-end p-3 bg-gray-50 rounded-md"
                     >
-                      <div className="col-span-6">
+                      <div className="col-span-4">
                         <Label className="text-xs">Product</Label>
                         <Select
+                          key={`product-${index}-${line.product}`}
                           value={line.product}
-                          onValueChange={(value) =>
-                            updateItem(index, 'product', value)
-                          }
+                          onValueChange={(value) => {
+                            updateItem(index, 'product', value);
+                            validateStock(value, line.quantity, index);
+                          }}
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select product" />
+                            <SelectValue placeholder="Select product">
+                              {line.product && (() => {
+                                const p = products.find(prod => prod.id.toString() === line.product);
+                                return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
+                              })()}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
@@ -606,12 +649,18 @@ export default function Transfers() {
                           type="number"
                           step="0.01"
                           value={line.quantity}
-                          onChange={(e) =>
-                            updateItem(index, 'quantity', e.target.value)
-                          }
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                          onChange={(e) => {
+                            updateItem(index, 'quantity', e.target.value);
+                            validateStock(line.product, e.target.value, index);
+                          }}
+                          className={`flex h-9 w-full rounded-md border px-2 py-1 text-sm ${
+                            stockValidationErrors[index] ? 'border-red-500 bg-red-50' : 'border-input bg-background'
+                          }`}
                           required
                         />
+                        {stockValidationErrors[index] && (
+                          <p className="text-xs text-red-600 mt-1">{stockValidationErrors[index]}</p>
+                        )}
                       </div>
                       <div className="col-span-2 flex justify-end">
                         {formData.lines.length > 1 && (

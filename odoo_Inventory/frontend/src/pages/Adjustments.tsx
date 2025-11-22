@@ -82,6 +82,31 @@ export default function Adjustments() {
     reason: 'PHYSICAL_COUNT',
     notes: '',
   });
+  
+  const [stockValidationError, setStockValidationError] = useState<string>('');
+  
+  const validateAdjustmentStock = () => {
+    const product = products.find(p => p.id.toString() === formData.product);
+    if (!product || !formData.system_quantity || !formData.counted_quantity) {
+      setStockValidationError('');
+      return true;
+    }
+    
+    const systemQty = parseFloat(formData.system_quantity);
+    const countedQty = parseFloat(formData.counted_quantity);
+    const difference = countedQty - systemQty;
+    
+    // If decreasing stock (negative adjustment)
+    if (difference < 0 && Math.abs(difference) > product.total_stock) {
+      setStockValidationError(
+        `Cannot decrease stock by ${Math.abs(difference).toFixed(2)}! Available: ${product.total_stock} ${product.uom_abbreviation}`
+      );
+      return false;
+    }
+    
+    setStockValidationError('');
+    return true;
+  };
 
   useEffect(() => {
     fetchData();
@@ -176,6 +201,12 @@ export default function Adjustments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for stock validation error
+    if (stockValidationError) {
+      toast.error('Please fix stock validation error before submitting');
+      return;
+    }
     try {
       const payload = {
         adjustment_number: formData.adjustment_number,
@@ -510,13 +541,19 @@ export default function Adjustments() {
                 <div className="grid gap-2">
                   <Label htmlFor="product">Product *</Label>
                   <Select
+                    key={`product-${formData.product}`}
                     value={formData.product}
                     onValueChange={(value) =>
                       setFormData({ ...formData, product: value })
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
+                      <SelectValue placeholder="Select product">
+                        {formData.product && (() => {
+                          const p = products.find(prod => prod.id.toString() === formData.product);
+                          return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
+                        })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
@@ -558,9 +595,10 @@ export default function Adjustments() {
                     type="number"
                     step="0.001"
                     value={formData.system_quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, system_quantity: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, system_quantity: e.target.value });
+                      setTimeout(validateAdjustmentStock, 100);
+                    }}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     placeholder="0.000"
                     required
@@ -574,13 +612,19 @@ export default function Adjustments() {
                     type="number"
                     step="0.001"
                     value={formData.counted_quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, counted_quantity: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    onChange={(e) => {
+                      setFormData({ ...formData, counted_quantity: e.target.value });
+                      setTimeout(validateAdjustmentStock, 100);
+                    }}
+                    className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm ${
+                      stockValidationError ? 'border-red-500 bg-red-50' : 'border-input bg-background'
+                    }`}
                     placeholder="0.000"
                     required
                   />
+                  {stockValidationError && (
+                    <p className="text-xs text-red-600 mt-1">{stockValidationError}</p>
+                  )}
                 </div>
                 
                 <div className="grid gap-2">
