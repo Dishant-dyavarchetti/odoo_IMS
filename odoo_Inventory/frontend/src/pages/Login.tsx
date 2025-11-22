@@ -4,21 +4,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
+import { authAPI } from '@/services/api';
+import { toast } from 'react-toastify';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Add your login logic here
-        console.log('Login:', { email, password, rememberMe });
+        setLoading(true);
+        try {
+            const response = await authAPI.login(username, password);
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            toast.success('Login successful!');
+            navigate('/dashboard');
+        } catch (error: any) {
+            toast.error(error.response?.data?.non_field_errors?.[0] || 'Login failed. Please check your credentials.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="w-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex">
                 {/* Left Side - Form */}
                 <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16">
@@ -29,19 +42,20 @@ const Login: React.FC = () => {
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6">
-                        {/* Email Input */}
+                        {/* Username Input */}
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                                Email*
+                            <Label htmlFor="username" className="text-sm font-semibold text-gray-700">
+                                Username*
                             </Label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="Enter your email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="username"
+                                type="text"
+                                placeholder="Enter your username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 required
+                                disabled={loading}
                             />
                         </div>
 
@@ -59,6 +73,7 @@ const Login: React.FC = () => {
                                 className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 required
                                 minLength={8}
+                                disabled={loading}
                             />
                         </div>
 
@@ -89,16 +104,21 @@ const Login: React.FC = () => {
                         <Button
                             type="submit"
                             className="w-full h-12 bg-gradient-to-r from-gray-900 to-gray-700 hover:from-gray-800 hover:to-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                            disabled={loading}
                         >
-                            Login
+                            {loading ? 'Logging in...' : 'Login'}
                         </Button>
 
                         {/* Sign Up Link */}
                         <p className="text-center text-sm text-gray-600">
                             Not registered yet?{' '}
-                            <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/register')}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
                                 Create a new account
-                            </a>
+                            </button>
                         </p>
                     </form>
                 </div>

@@ -4,17 +4,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
+import { authAPI } from '@/services/api';
+import { toast } from 'react-toastify';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
+        username: '',
         firstName: '',
         lastName: '',
         email: '',
-        phone: '',
         password: '',
+        role: 'WAREHOUSE_STAFF' as 'ADMIN' | 'INVENTORY_MANAGER' | 'WAREHOUSE_STAFF',
     });
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -24,18 +28,40 @@ const Register: React.FC = () => {
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!agreedToTerms) {
-            alert('Please agree to terms and policies');
+            toast.error('Please agree to terms and policies');
             return;
         }
-        // Add your registration logic here
-        console.log('Register:', formData);
+        
+        setLoading(true);
+        try {
+            const response = await authAPI.register({
+                username: formData.username,
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                password: formData.password,
+                role: formData.role,
+            });
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            toast.success('Registration successful!');
+            navigate('/dashboard');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.username?.[0] || 
+                           error.response?.data?.email?.[0] || 
+                           error.response?.data?.password?.[0] || 
+                           'Registration failed. Please try again.';
+            toast.error(errorMsg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-row-reverse">
                 {/* Right Side - Form */}
                 <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16">
@@ -51,93 +77,95 @@ const Register: React.FC = () => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Username */}
+                        <div className="space-y-2">
+                            <Label htmlFor="username" className="text-sm font-semibold text-gray-700">
+                                Username*
+                            </Label>
+                            <Input
+                                id="username"
+                                name="username"
+                                type="text"
+                                placeholder="Enter your username"
+                                value={formData.username}
+                                onChange={handleInputChange}
+                                className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                required
+                                disabled={loading}
+                            />
+                        </div>
+
                         {/* First Name & Last Name Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700">
-                                    First name
+                                    First name*
                                 </Label>
                                 <Input
                                     id="firstName"
                                     name="firstName"
                                     type="text"
-                                    placeholder="Enter your name"
+                                    placeholder="Enter your first name"
                                     value={formData.firstName}
                                     onChange={handleInputChange}
                                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
+                                    disabled={loading}
                                 />
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700">
-                                    Last name
+                                    Last name*
                                 </Label>
                                 <Input
                                     id="lastName"
                                     name="lastName"
                                     type="text"
-                                    placeholder="minimum 8 characters"
+                                    placeholder="Enter your last name"
                                     value={formData.lastName}
                                     onChange={handleInputChange}
                                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
-                                    minLength={8}
+                                    disabled={loading}
                                 />
                             </div>
                         </div>
 
-                        {/* Email & Phone Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                                    Email
-                                </Label>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">
-                                    Phone no.
-                                </Label>
-                                <Input
-                                    id="phone"
-                                    name="phone"
-                                    type="tel"
-                                    placeholder="minimum 8 characters"
-                                    value={formData.phone}
-                                    onChange={handleInputChange}
-                                    className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                    required
-                                    minLength={8}
-                                />
-                            </div>
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                                Email*
+                            </Label>
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="Enter your email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                required
+                                disabled={loading}
+                            />
                         </div>
 
                         {/* Password */}
                         <div className="space-y-2">
                             <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                                Password
+                                Password*
                             </Label>
                             <Input
                                 id="password"
                                 name="password"
                                 type="password"
-                                placeholder="Enter your email"
+                                placeholder="Minimum 8 characters"
                                 value={formData.password}
                                 onChange={handleInputChange}
                                 className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 required
                                 minLength={8}
+                                disabled={loading}
                             />
                         </div>
 
@@ -161,8 +189,9 @@ const Register: React.FC = () => {
                         <Button
                             type="submit"
                             className="w-full h-12 bg-gradient-to-r from-gray-900 to-gray-700 hover:from-gray-800 hover:to-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                            disabled={loading}
                         >
-                            Sign up
+                            {loading ? 'Creating account...' : 'Sign up'}
                         </Button>
 
                         {/* Login Link */}

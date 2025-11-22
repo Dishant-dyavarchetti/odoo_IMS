@@ -78,12 +78,19 @@ export default function Transfers() {
         productsAPI.getProducts(),
         warehousesAPI.getLocations(),
       ]);
-      setTransfers(transfersRes.data);
-      setProducts(productsRes.data);
-      setLocations(locationsRes.data);
+      const transfersData = transfersRes.data.results || transfersRes.data;
+      const productsData = productsRes.data.results || productsRes.data;
+      const locationsData = locationsRes.data.results || locationsRes.data;
+      
+      setTransfers(Array.isArray(transfersData) ? transfersData : []);
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setLocations(Array.isArray(locationsData) ? locationsData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load transfers');
+      setTransfers([]);
+      setProducts([]);
+      setLocations([]);
     } finally {
       setLoading(false);
     }
@@ -384,7 +391,7 @@ export default function Transfers() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
@@ -404,7 +411,7 @@ export default function Transfers() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select from location" />
                           </SelectTrigger>
                           <SelectContent>
                             {locations.map((l) => (
@@ -424,7 +431,7 @@ export default function Transfers() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select to location" />
                           </SelectTrigger>
                           <SelectContent>
                             {locations.map((l) => (

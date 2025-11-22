@@ -78,12 +78,19 @@ export default function Deliveries() {
         productsAPI.getProducts(),
         warehousesAPI.getLocations(),
       ]);
-      setDeliveries(deliveriesRes.data);
-      setProducts(productsRes.data);
-      setLocations(locationsRes.data);
+      const deliveriesData = deliveriesRes.data.results || deliveriesRes.data;
+      const productsData = productsRes.data.results || productsRes.data;
+      const locationsData = locationsRes.data.results || locationsRes.data;
+      
+      setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setLocations(Array.isArray(locationsData) ? locationsData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load deliveries');
+      setDeliveries([]);
+      setProducts([]);
+      setLocations([]);
     } finally {
       setLoading(false);
     }
@@ -405,7 +412,7 @@ export default function Deliveries() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
@@ -425,7 +432,7 @@ export default function Deliveries() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder="Select location" />
                           </SelectTrigger>
                           <SelectContent>
                             {locations.map((l) => (

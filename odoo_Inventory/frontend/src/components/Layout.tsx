@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,6 +13,9 @@ import {
   LogOut,
   Menu,
   X,
+  FolderTree,
+  Ruler,
+  Database,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
@@ -26,6 +29,14 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
+  {
+    name: 'Master Data',
+    icon: Database,
+    children: [
+      { name: 'Categories', href: '/categories', icon: FolderTree },
+      { name: 'UOMs', href: '/uoms', icon: Ruler },
+    ],
+  },
   {
     name: 'Operations',
     icon: ClipboardList,
@@ -44,7 +55,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedMenu, setExpandedMenu] = useState<string | null>('Operations');
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -61,7 +72,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen w-full bg-gray-100">
       {/* Sidebar */}
       <div
         className={`${

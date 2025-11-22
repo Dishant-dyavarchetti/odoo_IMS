@@ -4,32 +4,32 @@ import { toast } from 'react-toastify';
 import {
   Package,
   AlertTriangle,
-  Clock,
   TrendingUp,
   ArrowDownToLine,
   ArrowUpFromLine,
   ArrowRightLeft,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface KPIData {
   total_products: number;
-  low_stock_items: number;
+  low_stock_count: number;
+  out_of_stock_count: number;
   pending_receipts: number;
   pending_deliveries: number;
-  pending_transfers: number;
-  total_warehouses: number;
-  total_locations: number;
+  transfers_scheduled: number;
+  total_stock_value: number;
 }
 
 interface RecentMovement {
   id: number;
   product_name: string;
+  product_sku: string;
   movement_type: string;
-  quantity: number;
-  location_from: string | null;
-  location_to: string | null;
+  quantity: string;
+  source_location: string | null;
+  destination_location: string | null;
   created_at: string;
+  created_by: string;
 }
 
 export default function Dashboard() {
@@ -49,10 +49,13 @@ export default function Dashboard() {
         dashboardAPI.getRecentMovements(),
       ]);
       setKpis(kpiResponse.data);
-      setRecentMovements(movementsResponse.data.slice(0, 10));
+      const movementsData = movementsResponse.data.results || movementsResponse.data;
+      const movements = Array.isArray(movementsData) ? movementsData : [];
+      setRecentMovements(movements.slice(0, 10));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
+      setRecentMovements([]);
     } finally {
       setLoading(false);
     }
@@ -68,9 +71,15 @@ export default function Dashboard() {
         },
         {
           title: 'Low Stock Items',
-          value: kpis.low_stock_items,
+          value: kpis.low_stock_count,
           icon: AlertTriangle,
           color: 'bg-red-500',
+        },
+        {
+          title: 'Out of Stock',
+          value: kpis.out_of_stock_count,
+          icon: AlertTriangle,
+          color: 'bg-yellow-500',
         },
         {
           title: 'Pending Receipts',
@@ -86,15 +95,9 @@ export default function Dashboard() {
         },
         {
           title: 'Pending Transfers',
-          value: kpis.pending_transfers,
+          value: kpis.transfers_scheduled,
           icon: ArrowRightLeft,
           color: 'bg-purple-500',
-        },
-        {
-          title: 'Warehouses',
-          value: kpis.total_warehouses,
-          icon: TrendingUp,
-          color: 'bg-indigo-500',
         },
       ]
     : [];
@@ -204,10 +207,10 @@ export default function Dashboard() {
                       {movement.quantity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {movement.location_from || '-'}
+                      {movement.source_location || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {movement.location_to || '-'}
+                      {movement.destination_location || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(movement.created_at).toLocaleString()}

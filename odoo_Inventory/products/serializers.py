@@ -60,7 +60,15 @@ class ProductListSerializer(serializers.ModelSerializer):
     
     category_name = serializers.CharField(source='category.name', read_only=True)
     uom_abbreviation = serializers.CharField(source='uom.abbreviation', read_only=True)
+    total_stock = serializers.SerializerMethodField()
+    is_low_stock = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
-        fields = ['id', 'sku', 'name', 'category_name', 'uom_abbreviation', 'cost_price', 'selling_price', 'is_active']
+        fields = ['id', 'sku', 'name', 'category_name', 'uom_abbreviation', 'cost_price', 'selling_price', 'is_active', 'total_stock', 'is_low_stock', 'min_stock_level']
+    
+    def get_total_stock(self, obj):
+        return obj.get_total_stock()
+    
+    def get_is_low_stock(self, obj):
+        return obj.is_low_stock()

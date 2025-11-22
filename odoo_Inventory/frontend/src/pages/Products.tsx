@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { productsAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Pagination from '@/components/Pagination';
 import {
   Dialog,
   DialogContent,
@@ -25,11 +26,18 @@ interface Product {
   sku: string;
   name: string;
   description: string;
+  category: number;
   category_name: string;
+  uom: number;
   uom_name: string;
-  reorder_level: number;
+  uom_abbreviation: string;
+  cost_price: string;
+  selling_price: string;
+  min_stock_level: number;
+  reorder_quantity: number;
   total_stock: number;
   is_low_stock: boolean;
+  is_active: boolean;
 }
 
 interface Category {
@@ -51,6 +59,20 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  
+  // Filters
+  const [filters, setFilters] = useState({
+    category: '',
+    is_active: '',
+    stock_status: '', // all, in_stock, low_stock, out_of_stock
+    ordering: '-created_at',
+  });
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -58,30 +80,69 @@ export default function Products() {
     description: '',
     category: '',
     uom: '',
-    reorder_level: '',
+    cost_price: '',
+    selling_price: '',
+    min_stock_level: '',
+    reorder_quantity: '',
   });
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageSize, filters]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      const params: any = {
+        page: currentPage,
+        page_size: pageSize,
+        search: searchTerm,
+        ordering: filters.ordering,
+      };
+      
+      if (filters.category) params.category = filters.category;
+      if (filters.is_active) params.is_active = filters.is_active;
+      
       const [productsRes, categoriesRes, uomsRes] = await Promise.all([
-        productsAPI.getProducts(),
+        productsAPI.getProducts(params),
         productsAPI.getCategories(),
         productsAPI.getUOMs(),
       ]);
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
-      setUOMs(uomsRes.data);
-    } catch (error) {
+      
+      // Handle paginated response
+      const productsData = productsRes.data.results || productsRes.data;
+      const categoriesData = categoriesRes.data.results || categoriesRes.data;
+      const uomsData = uomsRes.data.results || uomsRes.data;
+      
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setUOMs(Array.isArray(uomsData) ? uomsData : []);
+      setTotalItems(productsRes.data.count || productsData.length);
+    } catch (error: any) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load products');
+      toast.error(error.response?.data?.detail || error.message || 'Failed to load products');
+      setProducts([]);
+      setCategories([]);
+      setUOMs([]);
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchData();
+  };
+  
+  const handleResetFilters = () => {
+    setFilters({
+      category: '',
+      is_active: '',
+      stock_status: '',
+      ordering: '-created_at',
+    });
+    setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleOpenDialog = (product?: Product) => {
@@ -91,9 +152,12 @@ export default function Products() {
         sku: product.sku,
         name: product.name,
         description: product.description,
-        category: '', // Will need category ID
-        uom: '', // Will need UOM ID
-        reorder_level: product.reorder_level.toString(),
+        category: product.category.toString(),
+        uom: product.uom.toString(),
+        cost_price: product.cost_price,
+        selling_price: product.selling_price,
+        min_stock_level: product.min_stock_level.toString(),
+        reorder_quantity: product.reorder_quantity.toString(),
       });
     } else {
       setEditingProduct(null);
@@ -103,7 +167,10 @@ export default function Products() {
         description: '',
         category: '',
         uom: '',
-        reorder_level: '0',
+        cost_price: '',
+        selling_price: '',
+        min_stock_level: '0',
+        reorder_quantity: '0',
       });
     }
     setShowDialog(true);
@@ -118,7 +185,10 @@ export default function Products() {
         description: formData.description,
         category: parseInt(formData.category),
         uom: parseInt(formData.uom),
-        reorder_level: parseFloat(formData.reorder_level),
+        cost_price: formData.cost_price,
+        selling_price: formData.selling_price,
+        min_stock_level: parseInt(formData.min_stock_level),
+        reorder_quantity: parseInt(formData.reorder_quantity),
       };
 
       if (editingProduct) {
@@ -130,6 +200,7 @@ export default function Products() {
       }
 
       setShowDialog(false);
+      setCurrentPage(1);
       fetchData();
     } catch (error: any) {
       console.error('Error saving product:', error);
@@ -143,6 +214,9 @@ export default function Products() {
     try {
       await productsAPI.deleteProduct(id);
       toast.success('Product deleted successfully');
+      if (products.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
       fetchData();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -150,11 +224,15 @@ export default function Products() {
     }
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply stock status filter locally
+  const filteredProducts = products.filter((product) => {
+    if (filters.stock_status === 'low_stock') return product.is_low_stock;
+    if (filters.stock_status === 'out_of_stock') return product.total_stock === 0;
+    if (filters.stock_status === 'in_stock') return product.total_stock > 0 && !product.is_low_stock;
+    return true;
+  });
+
+  const totalPages = Math.ceil(totalItems / pageSize);
 
   if (loading) {
     return (
@@ -180,18 +258,138 @@ export default function Products() {
         </Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search products by name or SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Search and Filters */}
+      <div className="bg-white p-4 rounded-lg shadow border border-gray-200 space-y-4">
+        <div className="flex gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Search products by name or SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <Button onClick={handleSearch}>
+            <Search className="mr-2 h-4 w-4" />
+            Search
+          </Button>
+          <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters {showFilters && <X className="ml-2 h-4 w-4" />}
+          </Button>
         </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t">
+            <div>
+              <Label className="text-sm font-medium mb-2">Category</Label>
+              <Select
+                value={filters.category}
+                onValueChange={(value) => setFilters({ ...filters, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2">Stock Status</Label>
+              <Select
+                value={filters.stock_status}
+                onValueChange={(value) => setFilters({ ...filters, stock_status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="low_stock">Low Stock</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2">Status</Label>
+              <Select
+                value={filters.is_active}
+                onValueChange={(value) => setFilters({ ...filters, is_active: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2">Sort By</Label>
+              <Select
+                value={filters.ordering}
+                onValueChange={(value) => setFilters({ ...filters, ordering: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-created_at">Newest First</SelectItem>
+                  <SelectItem value="created_at">Oldest First</SelectItem>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="-name">Name (Z-A)</SelectItem>
+                  <SelectItem value="sku">SKU (A-Z)</SelectItem>
+                  <SelectItem value="-sku">SKU (Z-A)</SelectItem>
+                  <SelectItem value="cost_price">Price (Low-High)</SelectItem>
+                  <SelectItem value="-cost_price">Price (High-Low)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2">Per Page</Label>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => {
+                  setPageSize(parseInt(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-5 flex gap-2">
+              <Button variant="outline" onClick={handleResetFilters} className="w-full">
+                Reset Filters
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Products Table */}
@@ -213,10 +411,16 @@ export default function Products() {
                   UOM
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cost Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Selling Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stock
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reorder Level
+                  Min Stock
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -229,7 +433,7 @@ export default function Products() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     No products found
                   </td>
                 </tr>
@@ -246,13 +450,19 @@ export default function Products() {
                       {product.category_name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.uom_name}
+                      {product.uom_abbreviation}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{parseFloat(product.cost_price).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{parseFloat(product.selling_price).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product.total_stock}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.reorder_level}
+                      {product.min_stock_level}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {product.is_low_stock ? (
@@ -285,6 +495,15 @@ export default function Products() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Add/Edit Dialog */}
@@ -372,19 +591,63 @@ export default function Products() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="reorder_level">Reorder Level *</Label>
-                <input
-                  id="reorder_level"
-                  type="number"
-                  step="0.01"
-                  value={formData.reorder_level}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reorder_level: e.target.value })
-                  }
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="cost_price">Cost Price *</Label>
+                  <input
+                    id="cost_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.cost_price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cost_price: e.target.value })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="selling_price">Selling Price *</Label>
+                  <input
+                    id="selling_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.selling_price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, selling_price: e.target.value })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="min_stock_level">Min Stock Level *</Label>
+                  <input
+                    id="min_stock_level"
+                    type="number"
+                    value={formData.min_stock_level}
+                    onChange={(e) =>
+                      setFormData({ ...formData, min_stock_level: e.target.value })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="reorder_quantity">Reorder Quantity *</Label>
+                  <input
+                    id="reorder_quantity"
+                    type="number"
+                    value={formData.reorder_quantity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reorder_quantity: e.target.value })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
