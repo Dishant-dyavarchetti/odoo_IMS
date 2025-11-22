@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { productsAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Filter, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
+import { ViewDialog } from '@/components/ViewDialog';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
@@ -38,6 +39,8 @@ export default function UOMs() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingUOM, setEditingUOM] = useState<UOM | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewUOM, setViewUOM] = useState<UOM | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);

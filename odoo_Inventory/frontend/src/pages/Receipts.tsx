@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { receiptsAPI, productsAPI, warehousesAPI } from '@/services/api';
+import { receiptsAPI, productsAPI, warehousesAPI, authAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, CheckCircle, Filter, X } from 'lucide-react';
+import { Plus, Search, Trash2, CheckCircle, Edit, X, Eye, Filter } from 'lucide-react';
+import { ViewDialog } from '@/components/ViewDialog';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import { PermissionGuard } from '@/components/PermissionGuard';
@@ -29,6 +30,8 @@ interface Receipt {
   expected_date: string;
   status: string;
   notes: string;
+  responsible?: number;
+  responsible_username?: string;
   created_by_name: string;
   validated_by_name: string | null;
   items: ReceiptItem[];
@@ -64,11 +67,14 @@ export default function Receipts() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewReceipt, setViewReceipt] = useState<Receipt | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -83,7 +89,8 @@ export default function Receipts() {
     destination_location: '',
     expected_date: new Date().toISOString().split('T')[0],
     notes: '',
-    lines: [{ product: '', quantity: '', unit_price: '', notes: '' }],
+    responsible: '',
+    lines: [{ product: 0, quantity: '', unit_price: '', notes: '' }],
   });
 
   useEffect(() => {
@@ -120,17 +127,20 @@ export default function Receipts() {
   
   const fetchMasterData = async () => {
     try {
-      const [productsRes, locationsRes] = await Promise.all([
+      const [productsRes, locationsRes, usersRes] = await Promise.all([
         productsAPI.getProducts({ page_size: 1000 }),
         warehousesAPI.getLocations({ page_size: 1000 }),
+        authAPI.getUsers({ page_size: 1000 }),
       ]);
       const productsData = productsRes.data.results || productsRes.data;
       const locationsData = locationsRes.data.results || locationsRes.data;
+      const usersData = usersRes.data.results || usersRes.data;
       setProducts(Array.isArray(productsData) ? productsData : []);
       setLocations(Array.isArray(locationsData) ? locationsData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       console.error('Error fetching master data:', error);
-      toast.error('Failed to load products/locations');
+      toast.error('Failed to load products/locations/users');
     }
   };
   
@@ -156,8 +166,9 @@ export default function Receipts() {
         destination_location: '', // Will need location ID from backend
         expected_date: receipt.expected_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         notes: receipt.notes,
+        responsible: receipt.responsible?.toString() || '',
         lines: receipt.items.map((item) => ({
-          product: item.product.toString(),
+          product: item.product,
           quantity: item.quantity.toString(),
           unit_price: item.unit_price.toString(),
           notes: '',
@@ -172,7 +183,8 @@ export default function Receipts() {
         destination_location: '',
         expected_date: new Date().toISOString().split('T')[0],
         notes: '',
-        lines: [{ product: '', quantity: '', unit_price: '', notes: '' }],
+        responsible: '',
+        lines: [{ product: 0, quantity: '', unit_price: '', notes: '' }],
       });
     }
     setShowDialog(true);
@@ -181,7 +193,7 @@ export default function Receipts() {
   const addItem = () => {
     setFormData({
       ...formData,
-      lines: [...formData.lines, { product: '', quantity: '', unit_price: '', notes: '' }],
+      lines: [...formData.lines, { product: 0, quantity: '', unit_price: '', notes: '' }],
     });
   };
 
@@ -196,20 +208,56 @@ export default function Receipts() {
     const newLines = [...formData.lines];
     newLines[index] = { ...newLines[index], [field]: value };
     setFormData({ ...formData, lines: newLines });
+    console.log('Updated line', index, 'field', field, 'to value', value);
+    console.log('New lines state:', newLines);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.supplier_name.trim()) {
+      toast.error('Supplier name is required');
+      return;
+    }
+    if (!formData.destination_location) {
+      toast.error('Destination location is required');
+      return;
+    }
+    if (!formData.lines.length) {
+      toast.error('At least one line item is required');
+      return;
+    }
+    
+    // Validate line items
+    for (let i = 0; i < formData.lines.length; i++) {
+      const line = formData.lines[i];
+      console.log(`Validating line ${i + 1}:`, line);
+      if (!line.product || line.product === 0) {
+        toast.error(`Product is required for line ${i + 1}`);
+        return;
+      }
+      if (!line.quantity || line.quantity.trim() === '' || parseFloat(line.quantity) <= 0) {
+        toast.error(`Valid quantity is required for line ${i + 1}`);
+        return;
+      }
+      if (!line.unit_price || line.unit_price.trim() === '' || parseFloat(line.unit_price) < 0) {
+        toast.error(`Valid unit price is required for line ${i + 1}`);
+        return;
+      }
+    }
+    
     try {
       const payload = {
         receipt_number: formData.receipt_number,
         supplier_name: formData.supplier_name,
         supplier_reference: formData.supplier_reference || undefined,
         destination_location: parseInt(formData.destination_location),
-        expected_date: formData.expected_date,
-        notes: formData.notes,
+        expected_date: formData.expected_date || undefined,
+        notes: formData.notes || undefined,
+        responsible: formData.responsible ? parseInt(formData.responsible) : null,
         lines: formData.lines.map((line) => ({
-          product: parseInt(line.product),
+          product: typeof line.product === 'string' ? parseInt(line.product) : line.product,
           quantity: parseFloat(line.quantity),
           unit_price: parseFloat(line.unit_price),
           notes: line.notes || undefined,
@@ -228,8 +276,27 @@ export default function Receipts() {
       fetchData();
     } catch (error: any) {
       console.error('Error saving receipt:', error);
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data) || 'Failed to save receipt';
-      toast.error(errorMsg);
+      
+      // Extract detailed error messages from backend
+      let errorMessage = 'Failed to save receipt';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.lines) {
+          errorMessage = 'Validation errors in line items: ' + JSON.stringify(errorData.lines);
+        } else {
+          const firstError = Object.entries(errorData)[0];
+          if (firstError) {
+            errorMessage = `${firstError[0]}: ${Array.isArray(firstError[1]) ? firstError[1][0] : firstError[1]}`;
+          }
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -541,7 +608,7 @@ export default function Receipts() {
                 <div className="grid gap-2">
                   <Label htmlFor="destination_location">Destination Location *</Label>
                   <Select
-                    value={formData.destination_location}
+                    value={formData.destination_location || undefined}
                     onValueChange={(value) =>
                       setFormData({ ...formData, destination_location: value })
                     }
@@ -570,6 +637,27 @@ export default function Receipts() {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="responsible">Responsible</Label>
+                <Select
+                  value={formData.responsible || undefined}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, responsible: value })
+                  }
+                >
+                  <SelectTrigger id="responsible">
+                    <SelectValue placeholder="Select responsible user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.username} - {user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="grid gap-2">
@@ -603,23 +691,22 @@ export default function Receipts() {
                       <div className="col-span-4">
                         <Label className="text-xs">Product</Label>
                         <Select
-                          key={`product-${index}-${line.product}`}
-                          value={line.product}
+                          value={line.product ? line.product.toString() : undefined}
                           onValueChange={(value) => {
-                            const selectedProduct = products.find(p => p.id.toString() === value);
-                            updateItem(index, 'product', value);
-                            if (selectedProduct) {
-                              updateItem(index, 'unit_price', selectedProduct.cost_price.toString());
-                            }
+                            const productId = parseInt(value);
+                            const selectedProduct = products.find(p => p.id === productId);
+                            
+                            const newLines = [...formData.lines];
+                            newLines[index] = { 
+                              ...newLines[index], 
+                              product: productId,
+                              unit_price: selectedProduct ? selectedProduct.cost_price.toString() : newLines[index].unit_price
+                            };
+                            setFormData({ ...formData, lines: newLines });
                           }}
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select product">
-                              {line.product && (() => {
-                                const p = products.find(prod => prod.id.toString() === line.product);
-                                return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
-                              })()}
-                            </SelectValue>
+                            <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
@@ -629,6 +716,11 @@ export default function Receipts() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {line.product && line.product !== 0 && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Selected: {products.find(p => p.id === line.product)?.name || 'Unknown'}
+                          </p>
+                        )}
                       </div>
                       <div className="col-span-2">
                         <Label className="text-xs">Quantity</Label>

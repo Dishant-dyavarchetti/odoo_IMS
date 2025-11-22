@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { deliveriesAPI, productsAPI, warehousesAPI } from '@/services/api';
+import { deliveriesAPI, productsAPI, warehousesAPI, authAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, CheckCircle, Filter, X } from 'lucide-react';
+import { Plus, Search, Trash2, CheckCircle, Edit, X, Eye, Filter } from 'lucide-react';
+import { ViewDialog } from '@/components/ViewDialog';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import {
@@ -32,6 +33,8 @@ interface Delivery {
   scheduled_date: string;
   status: string;
   notes: string;
+  responsible?: number;
+  responsible_username?: string;
   created_by_username: string;
   validated_by_username: string | null;
   lines: DeliveryLine[];
@@ -66,11 +69,14 @@ export default function Deliveries() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewDelivery, setViewDelivery] = useState<Delivery | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -86,7 +92,8 @@ export default function Deliveries() {
     shipping_address: '',
     scheduled_date: new Date().toISOString().split('T')[0],
     notes: '',
-    lines: [{ product: '', quantity: '', unit_price: '', notes: '' }],
+    responsible: '',
+    lines: [{ product: 0, quantity: '', unit_price: '', notes: '' }],
   });
   
   const [stockValidationErrors, setStockValidationErrors] = useState<{[key: number]: string}>({});
@@ -153,17 +160,20 @@ export default function Deliveries() {
   
   const fetchMasterData = async () => {
     try {
-      const [productsRes, locationsRes] = await Promise.all([
+      const [productsRes, locationsRes, usersRes] = await Promise.all([
         productsAPI.getProducts({ page_size: 1000 }),
         warehousesAPI.getLocations({ page_size: 1000 }),
+        authAPI.getUsers({ page_size: 1000 }),
       ]);
       const productsData = productsRes.data.results || productsRes.data;
       const locationsData = locationsRes.data.results || locationsRes.data;
+      const usersData = usersRes.data.results || usersRes.data;
       setProducts(Array.isArray(productsData) ? productsData : []);
       setLocations(Array.isArray(locationsData) ? locationsData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       console.error('Error fetching master data:', error);
-      toast.error('Failed to load products/locations');
+      toast.error('Failed to load products/locations/users');
     }
   };
   
@@ -190,12 +200,13 @@ export default function Deliveries() {
         shipping_address: delivery.shipping_address || '',
         scheduled_date: delivery.scheduled_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         notes: delivery.notes || '',
+        responsible: delivery.responsible?.toString() || '',
         lines: delivery.lines?.map((line) => ({
-          product: line.product.toString(),
+          product: line.product,
           quantity: line.quantity.toString(),
           unit_price: line.unit_price?.toString() || '0',
           notes: line.notes || '',
-        })) || [{ product: '', quantity: '', unit_price: '', notes: '' }],
+        })) || [{ product: 0, quantity: '', unit_price: '', notes: '' }],
       });
     } else {
       setEditingDelivery(null);
@@ -207,7 +218,8 @@ export default function Deliveries() {
         shipping_address: '',
         scheduled_date: new Date().toISOString().split('T')[0],
         notes: '',
-        lines: [{ product: '', quantity: '', unit_price: '', notes: '' }],
+        responsible: '',
+        lines: [{ product: 0, quantity: '', unit_price: '', notes: '' }],
       });
     }
     setShowDialog(true);
@@ -216,7 +228,7 @@ export default function Deliveries() {
   const addItem = () => {
     setFormData({
       ...formData,
-      lines: [...formData.lines, { product: '', quantity: '', unit_price: '', notes: '' }],
+      lines: [...formData.lines, { product: 0, quantity: '', unit_price: '', notes: '' }],
     });
   };
 
@@ -228,10 +240,18 @@ export default function Deliveries() {
   };
 
   const updateItem = (index: number, field: string, value: string) => {
-    const newLines = [...formData.lines];
-    newLines[index] = { ...newLines[index], [field]: value };
-    setFormData({ ...formData, lines: newLines });
+    setFormData(prevData => {
+      const newLines = [...prevData.lines];
+      newLines[index] = { ...newLines[index], [field]: value };
+      console.log('Updated line', index, 'field', field, 'to value', value);
+      console.log('New lines state:', newLines);
+      return { ...prevData, lines: newLines };
+    });
   };
+
+  useEffect(() => {
+    console.log("form:", formData);
+  }, [formData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,20 +261,54 @@ export default function Deliveries() {
       toast.error('Please fix stock validation errors before submitting');
       return;
     }
+    
+    // Validate required fields
+    if (!formData.customer_name.trim()) {
+      toast.error('Customer name is required');
+      return;
+    }
+    if (!formData.source_location) {
+      toast.error('Source location is required');
+      return;
+    }
+    if (!formData.lines.length) {
+      toast.error('At least one line item is required');
+      return;
+    }
+    
+    // Validate line items
+    for (let i = 0; i < formData.lines.length; i++) {
+      const line = formData.lines[i];
+      console.log(`Validating line ${i + 1}:`, line);
+      if (!line.product || line.product === 0) {
+        toast.error(`Product is required for line ${i + 1}`);
+        return;
+      }
+      if (!line.quantity || line.quantity.trim() === '' || parseFloat(line.quantity) <= 0) {
+        toast.error(`Valid quantity is required for line ${i + 1}`);
+        return;
+      }
+      if (!line.unit_price || line.unit_price.trim() === '' || parseFloat(line.unit_price) < 0) {
+        toast.error(`Valid unit price is required for line ${i + 1}`);
+        return;
+      }
+    }
+    
     try {
       const payload = {
         delivery_number: formData.delivery_number,
         customer_name: formData.customer_name,
-        customer_reference: formData.customer_reference,
+        customer_reference: formData.customer_reference || undefined,
         source_location: parseInt(formData.source_location),
-        shipping_address: formData.shipping_address,
-        scheduled_date: formData.scheduled_date,
-        notes: formData.notes,
+        shipping_address: formData.shipping_address || undefined,
+        scheduled_date: formData.scheduled_date || undefined,
+        notes: formData.notes || undefined,
+        responsible: formData.responsible ? parseInt(formData.responsible) : null,
         lines: formData.lines.map((line) => ({
-          product: parseInt(line.product),
+          product: typeof line.product === 'string' ? parseInt(line.product) : line.product,
           quantity: parseFloat(line.quantity),
           unit_price: parseFloat(line.unit_price),
-          notes: line.notes,
+          notes: line.notes || undefined,
         })),
       };
 
@@ -270,7 +324,29 @@ export default function Deliveries() {
       fetchData();
     } catch (error: any) {
       console.error('Error saving delivery:', error);
-      toast.error(error.response?.data?.message || 'Failed to save delivery');
+      
+      // Extract detailed error messages from backend
+      let errorMessage = 'Failed to save delivery';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.lines) {
+          // Handle line-level errors
+          errorMessage = 'Validation errors in line items: ' + JSON.stringify(errorData.lines);
+        } else {
+          // Show first validation error
+          const firstError = Object.entries(errorData)[0];
+          if (firstError) {
+            errorMessage = `${firstError[0]}: ${Array.isArray(firstError[1]) ? firstError[1][0] : firstError[1]}`;
+          }
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -578,7 +654,7 @@ export default function Deliveries() {
                 <div className="grid gap-2">
                   <Label htmlFor="source_location">Source Location *</Label>
                   <Select
-                    value={formData.source_location}
+                    value={formData.source_location || undefined}
                     onValueChange={(value) =>
                       setFormData({ ...formData, source_location: value })
                     }
@@ -610,6 +686,28 @@ export default function Deliveries() {
                     required
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="responsible">Responsible</Label>
+                  <Select
+                    value={formData.responsible || undefined}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, responsible: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.username} - {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="shipping_address">Shipping Address</Label>
                   <input
@@ -653,15 +751,26 @@ export default function Deliveries() {
                       <div className="col-span-4">
                         <Label className="text-xs">Product</Label>
                         <Select
-                          value={line.product}
+                          value={line.product ? line.product.toString() : undefined}
                           onValueChange={(value) => {
-                            const selectedProduct = products.find(p => p.id.toString() === value);
-                            console.log('Selected product:', selectedProduct);
-                            updateItem(index, 'product', value);
-                            if (selectedProduct) {
-                              updateItem(index, 'unit_price', selectedProduct.selling_price.toString());
-                            }
-                            validateStock(value, line.quantity, index);
+                            const productId = parseInt(value);
+                            const selectedProduct = products.find(p => p.id === productId);
+                            
+                            setFormData(prevData => {
+                              const newLines = [...prevData.lines];
+                              newLines[index] = { 
+                                ...newLines[index], 
+                                product: productId,
+                                unit_price: selectedProduct ? selectedProduct.selling_price.toString() : newLines[index].unit_price
+                              };
+                              
+                              // Validate stock
+                              setTimeout(() => {
+                                validateStock(value, newLines[index].quantity, index);
+                              }, 0);
+                              
+                              return { ...prevData, lines: newLines };
+                            });
                           }}
                         >
                           <SelectTrigger className="h-9">
@@ -675,6 +784,11 @@ export default function Deliveries() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {line.product && line.product !== 0 && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Selected: {products.find(p => p.id === line.product)?.name || 'Unknown'}
+                          </p>
+                        )}
                       </div>
                       <div className="col-span-3">
                         <Label className="text-xs">Quantity</Label>

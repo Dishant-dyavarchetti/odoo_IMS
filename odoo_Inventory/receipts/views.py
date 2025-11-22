@@ -4,6 +4,9 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Receipt, ReceiptLine
 from .serializers import ReceiptSerializer, ReceiptCreateSerializer, ReceiptValidateSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ReceiptViewSet(viewsets.ModelViewSet):
@@ -23,6 +26,18 @@ class ReceiptViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return ReceiptCreateSerializer
         return ReceiptSerializer
+    
+    def create(self, request, *args, **kwargs):
+        logger.info(f"Creating receipt with data: {request.data}")
+        serializer = self.get_serializer(data=request.data)
+        
+        if not serializer.is_valid():
+            logger.error(f"Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

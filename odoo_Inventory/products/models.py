@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 
@@ -48,8 +49,8 @@ class Product(models.Model):
     uom = models.ForeignKey(UnitOfMeasure, on_delete=models.PROTECT, related_name='products')
     
     # Pricing
-    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
-    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
     
     # Reordering rules
     min_stock_level = models.IntegerField(default=0, validators=[MinValueValidator(0)], help_text="Minimum stock alert level")
@@ -58,7 +59,7 @@ class Product(models.Model):
     # Additional info
     barcode = models.CharField(max_length=50, blank=True, null=True, unique=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
-    weight = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
+    weight = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal('0'))])
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

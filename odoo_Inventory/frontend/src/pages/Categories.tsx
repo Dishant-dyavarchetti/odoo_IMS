@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { productsAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Filter, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { ViewDialog } from '@/components/ViewDialog';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,8 @@ export default function Categories() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewCategory, setViewCategory] = useState<Category | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -340,6 +343,16 @@ export default function Categories() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => {
+                          setViewCategory(category);
+                          setShowViewDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenDialog(category)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
@@ -433,6 +446,25 @@ export default function Categories() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      {viewCategory && (
+        <ViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          title={`Category: ${viewCategory.name}`}
+          data={viewCategory}
+          fields={[
+            { label: 'Name', key: 'name' },
+            { label: 'Description', key: 'description' },
+            { label: 'Products Count', key: 'products_count' },
+            { label: 'Sub-categories Count', key: 'children_count' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+            { label: 'Created At', key: 'created_at', format: (val) => new Date(val).toLocaleString() },
+            { label: 'Updated At', key: 'updated_at', format: (val) => new Date(val).toLocaleString() },
+          ]}
+        />
+      )}
     </div>
   );
 }

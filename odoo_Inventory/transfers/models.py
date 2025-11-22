@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
@@ -94,7 +95,7 @@ class TransferLine(models.Model):
     
     transfer = models.ForeignKey(TransferOrder, on_delete=models.CASCADE, related_name='lines')
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='transfer_lines')
-    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(0.001)])
+    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(Decimal('0.001'))])
     
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

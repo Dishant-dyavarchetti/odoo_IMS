@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { transfersAPI, productsAPI, warehousesAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, CheckCircle, Filter, X } from 'lucide-react';
+import { Plus, Search, Trash2, CheckCircle, Edit, X, Eye, Filter } from 'lucide-react';
+import { ViewDialog } from '@/components/ViewDialog';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import {
@@ -69,6 +70,8 @@ export default function Transfers() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewTransfer, setViewTransfer] = useState<Transfer | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -82,7 +85,7 @@ export default function Transfers() {
     destination_location: '',
     scheduled_date: new Date().toISOString().split('T')[0],
     notes: '',
-    lines: [{ product: '', quantity: '', notes: '' }],
+    lines: [{ product: 0, quantity: '', notes: '' }],
   });
   
   const [stockValidationErrors, setStockValidationErrors] = useState<{[key: number]: string}>({});
@@ -185,10 +188,10 @@ export default function Transfers() {
         scheduled_date: transfer.scheduled_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         notes: transfer.notes || '',
         lines: transfer.lines?.map((line) => ({
-          product: line.product.toString(),
+          product: line.product,
           quantity: line.quantity.toString(),
           notes: line.notes || '',
-        })) || [{ product: '', quantity: '', notes: '' }],
+        })) || [{ product: 0, quantity: '', notes: '' }],
       });
     } else {
       setEditingTransfer(null);
@@ -198,7 +201,7 @@ export default function Transfers() {
         destination_location: '',
         scheduled_date: new Date().toISOString().split('T')[0],
         notes: '',
-        lines: [{ product: '', quantity: '', notes: '' }],
+        lines: [{ product: 0, quantity: '', notes: '' }],
       });
     }
     setShowDialog(true);
@@ -207,7 +210,7 @@ export default function Transfers() {
   const addItem = () => {
     setFormData({
       ...formData,
-      lines: [...formData.lines, { product: '', quantity: '', notes: '' }],
+      lines: [...formData.lines, { product: 0, quantity: '', notes: '' }],
     });
   };
 
@@ -222,6 +225,8 @@ export default function Transfers() {
     const newLines = [...formData.lines];
     newLines[index] = { ...newLines[index], [field]: value };
     setFormData({ ...formData, lines: newLines });
+    console.log('Updated line', index, 'field', field, 'to value', value);
+    console.log('New lines state:', newLines);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -232,17 +237,50 @@ export default function Transfers() {
       toast.error('Please fix stock validation errors before submitting');
       return;
     }
+    
+    // Validate required fields
+    if (!formData.source_location) {
+      toast.error('Source location is required');
+      return;
+    }
+    if (!formData.destination_location) {
+      toast.error('Destination location is required');
+      return;
+    }
+    if (formData.source_location === formData.destination_location) {
+      toast.error('Source and destination locations must be different');
+      return;
+    }
+    if (!formData.lines.length) {
+      toast.error('At least one line item is required');
+      return;
+    }
+    
+    // Validate line items
+    for (let i = 0; i < formData.lines.length; i++) {
+      const line = formData.lines[i];
+      console.log(`Validating line ${i + 1}:`, line);
+      if (!line.product || line.product === 0) {
+        toast.error(`Product is required for line ${i + 1}`);
+        return;
+      }
+      if (!line.quantity || line.quantity.trim() === '' || parseFloat(line.quantity) <= 0) {
+        toast.error(`Valid quantity is required for line ${i + 1}`);
+        return;
+      }
+    }
+    
     try {
       const payload = {
         transfer_number: formData.transfer_number,
         source_location: parseInt(formData.source_location),
         destination_location: parseInt(formData.destination_location),
-        scheduled_date: formData.scheduled_date,
-        notes: formData.notes,
+        scheduled_date: formData.scheduled_date || undefined,
+        notes: formData.notes || undefined,
         lines: formData.lines.map((line) => ({
-          product: parseInt(line.product),
+          product: typeof line.product === 'string' ? parseInt(line.product) : line.product,
           quantity: parseFloat(line.quantity),
-          notes: line.notes,
+          notes: line.notes || undefined,
         })),
       };
 
@@ -258,7 +296,27 @@ export default function Transfers() {
       fetchData();
     } catch (error: any) {
       console.error('Error saving transfer:', error);
-      toast.error(error.response?.data?.message || 'Failed to save transfer');
+      
+      // Extract detailed error messages from backend
+      let errorMessage = 'Failed to save transfer';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.lines) {
+          errorMessage = 'Validation errors in line items: ' + JSON.stringify(errorData.lines);
+        } else {
+          const firstError = Object.entries(errorData)[0];
+          if (firstError) {
+            errorMessage = `${firstError[0]}: ${Array.isArray(firstError[1]) ? firstError[1][0] : firstError[1]}`;
+          }
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -550,7 +608,7 @@ export default function Transfers() {
                 <div className="grid gap-2">
                   <Label htmlFor="source_location">Source Location *</Label>
                   <Select
-                    value={formData.source_location}
+                    value={formData.source_location || undefined}
                     onValueChange={(value) =>
                       setFormData({ ...formData, source_location: value })
                     }
@@ -570,7 +628,7 @@ export default function Transfers() {
                 <div className="grid gap-2">
                   <Label htmlFor="destination_location">Destination Location *</Label>
                   <Select
-                    value={formData.destination_location}
+                    value={formData.destination_location || undefined}
                     onValueChange={(value) =>
                       setFormData({ ...formData, destination_location: value })
                     }
@@ -619,20 +677,19 @@ export default function Transfers() {
                       <div className="col-span-4">
                         <Label className="text-xs">Product</Label>
                         <Select
-                          key={`product-${index}-${line.product}`}
-                          value={line.product}
+                          value={line.product ? line.product.toString() : undefined}
                           onValueChange={(value) => {
-                            updateItem(index, 'product', value);
+                            const productId = parseInt(value);
+                            
+                            const newLines = [...formData.lines];
+                            newLines[index] = { ...newLines[index], product: productId };
+                            setFormData({ ...formData, lines: newLines });
+                            
                             validateStock(value, line.quantity, index);
                           }}
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select product">
-                              {line.product && (() => {
-                                const p = products.find(prod => prod.id.toString() === line.product);
-                                return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
-                              })()}
-                            </SelectValue>
+                            <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
@@ -642,6 +699,11 @@ export default function Transfers() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {line.product && line.product !== 0 && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Selected: {products.find(p => p.id === line.product)?.name || 'Unknown'}
+                          </p>
+                        )}
                       </div>
                       <div className="col-span-4">
                         <Label className="text-xs">Quantity</Label>

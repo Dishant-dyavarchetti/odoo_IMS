@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { warehousesAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ViewDialog } from '@/components/ViewDialog';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
@@ -40,6 +41,10 @@ export default function Warehouses() {
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [viewWarehouse, setViewWarehouse] = useState<Warehouse | null>(null);
+  const [viewLocation, setViewLocation] = useState<Location | null>(null);
+  const [showViewWarehouseDialog, setShowViewWarehouseDialog] = useState(false);
+  const [showViewLocationDialog, setShowViewLocationDialog] = useState(false);
 
   const [warehouseForm, setWarehouseForm] = useState({
     code: '',

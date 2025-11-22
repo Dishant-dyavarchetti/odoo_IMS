@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
@@ -18,7 +19,7 @@ class StockMovement(models.Model):
     # Movement details
     movement_type = models.CharField(max_length=15, choices=MOVEMENT_TYPE_CHOICES)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='movements')
-    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(0)])
+    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(Decimal('0'))])
     
     # Locations
     source_location = models.ForeignKey(Location, on_delete=models.PROTECT, 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
@@ -29,6 +30,8 @@ class Receipt(models.Model):
     
     notes = models.TextField(blank=True, null=True)
     
+    responsible = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, 
+                                    related_name='responsible_receipts', null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='receipts')
     validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, 
                                      related_name='validated_receipts', null=True, blank=True)
@@ -80,8 +83,8 @@ class ReceiptLine(models.Model):
     
     receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='lines')
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='receipt_lines')
-    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(0.001)])
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    quantity = models.DecimalField(max_digits=15, decimal_places=3, validators=[MinValueValidator(Decimal('0.001'))])
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
     
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

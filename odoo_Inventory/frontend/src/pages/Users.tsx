@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { authAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, Filter, X, UserPlus, Shield, UserCog } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Filter, X, UserPlus, Shield, UserCog, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
+import { ViewDialog } from '@/components/ViewDialog';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,8 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [viewUser, setViewUser] = useState<User | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);

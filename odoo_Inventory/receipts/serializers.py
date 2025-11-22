@@ -27,13 +27,14 @@ class ReceiptSerializer(serializers.ModelSerializer):
     destination_location_code = serializers.CharField(source='destination_location.code', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     validated_by_username = serializers.CharField(source='validated_by.username', read_only=True)
+    responsible_username = serializers.CharField(source='responsible.username', read_only=True)
     
     class Meta:
         model = Receipt
         fields = [
             'id', 'receipt_number', 'supplier_name', 'supplier_reference',
             'destination_location', 'destination_location_code', 'status',
-            'expected_date', 'received_date', 'notes', 'lines',
+            'expected_date', 'received_date', 'notes', 'lines', 'responsible', 'responsible_username',
             'created_by', 'created_by_username', 'validated_by', 'validated_by_username',
             'created_at', 'updated_at', 'validated_at'
         ]
@@ -49,7 +50,7 @@ class ReceiptCreateSerializer(serializers.ModelSerializer):
         model = Receipt
         fields = [
             'receipt_number', 'supplier_name', 'supplier_reference',
-            'destination_location', 'status', 'expected_date', 'notes', 'lines'
+            'destination_location', 'status', 'expected_date', 'notes', 'lines', 'responsible'
         ]
     
     def create(self, validated_data):

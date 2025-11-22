@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { stockMovementsAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import Pagination from '@/components/Pagination';
+import { ViewDialog } from '@/components/ViewDialog';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,8 @@ export default function MoveHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMovement, setViewMovement] = useState<StockMovement | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);

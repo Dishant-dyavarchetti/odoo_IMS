@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { productsAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Filter, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { ViewDialog } from '@/components/ViewDialog';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,8 @@ export default function Products() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -479,6 +482,16 @@ export default function Products() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => {
+                          setViewProduct(product);
+                          setShowViewDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       <PermissionGuard permission="EDIT_PRODUCT">
                         <button
                           onClick={() => handleOpenDialog(product)}
@@ -672,6 +685,30 @@ export default function Products() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      {viewProduct && (
+        <ViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          title={`Product: ${viewProduct.name}`}
+          data={viewProduct}
+          fields={[
+            { label: 'SKU', key: 'sku' },
+            { label: 'Product Name', key: 'name' },
+            { label: 'Description', key: 'description' },
+            { label: 'Category', key: 'category_name' },
+            { label: 'Unit of Measure', key: 'uom_name', format: (val) => `${val} (${viewProduct.uom_abbreviation})` },
+            { label: 'Cost Price', key: 'cost_price', format: (val) => `$${parseFloat(val).toFixed(2)}` },
+            { label: 'Selling Price', key: 'selling_price', format: (val) => `$${parseFloat(val).toFixed(2)}` },
+            { label: 'Min Stock Level', key: 'min_stock_level' },
+            { label: 'Reorder Quantity', key: 'reorder_quantity' },
+            { label: 'Current Stock', key: 'total_stock' },
+            { label: 'Stock Status', key: 'is_low_stock', format: (val) => val ? 'Low Stock' : 'In Stock' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+          ]}
+        />
+      )}
     </div>
   );
 }

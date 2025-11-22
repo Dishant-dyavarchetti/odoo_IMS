@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
@@ -32,7 +33,7 @@ class AdjustmentEntry(models.Model):
     system_quantity = models.DecimalField(max_digits=15, decimal_places=3, 
                                          help_text="Current quantity in system")
     counted_quantity = models.DecimalField(max_digits=15, decimal_places=3, 
-                                          validators=[MinValueValidator(0)],
+                                          validators=[MinValueValidator(Decimal('0'))],
                                           help_text="Actual counted quantity")
     adjustment_quantity = models.DecimalField(max_digits=15, decimal_places=3, 
                                              help_text="Difference (counted - system)")

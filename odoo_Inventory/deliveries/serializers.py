@@ -27,13 +27,14 @@ class DeliveryOrderSerializer(serializers.ModelSerializer):
     source_location_code = serializers.CharField(source='source_location.code', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     validated_by_username = serializers.CharField(source='validated_by.username', read_only=True)
+    responsible_username = serializers.CharField(source='responsible.username', read_only=True)
     
     class Meta:
         model = DeliveryOrder
         fields = [
             'id', 'delivery_number', 'customer_name', 'customer_reference',
             'source_location', 'source_location_code', 'shipping_address', 'status',
-            'scheduled_date', 'delivery_date', 'notes', 'lines',
+            'scheduled_date', 'delivery_date', 'notes', 'lines', 'responsible', 'responsible_username',
             'created_by', 'created_by_username', 'validated_by', 'validated_by_username',
             'created_at', 'updated_at', 'validated_at'
         ]
@@ -49,7 +50,7 @@ class DeliveryOrderCreateSerializer(serializers.ModelSerializer):
         model = DeliveryOrder
         fields = [
             'delivery_number', 'customer_name', 'customer_reference',
-            'source_location', 'shipping_address', 'status', 'scheduled_date', 'notes', 'lines'
+            'source_location', 'shipping_address', 'status', 'scheduled_date', 'notes', 'lines', 'responsible'
         ]
     
     def create(self, validated_data):

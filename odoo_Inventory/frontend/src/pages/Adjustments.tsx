@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { adjustmentsAPI, productsAPI, warehousesAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import { Plus, Search, Edit, Trash2, CheckCircle, Filter, X } from 'lucide-react';
+import { Plus, Search, Trash2, CheckCircle, Edit, X, Eye, Filter } from 'lucide-react';
+import { ViewDialog } from '@/components/ViewDialog';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
 import {
@@ -65,6 +66,8 @@ export default function Adjustments() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingAdjustment, setEditingAdjustment] = useState<Adjustment | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewAdjustment, setViewAdjustment] = useState<Adjustment | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -75,7 +78,7 @@ export default function Adjustments() {
 
   const [formData, setFormData] = useState({
     adjustment_number: '',
-    product: '',
+    product: 0,
     location: '',
     counted_quantity: '',
     system_quantity: '',
@@ -175,7 +178,7 @@ export default function Adjustments() {
       setEditingAdjustment(adjustment);
       setFormData({
         adjustment_number: adjustment.adjustment_number,
-        product: adjustment.product.toString(),
+        product: adjustment.product,
         location: adjustment.location.toString(),
         counted_quantity: adjustment.counted_quantity.toString(),
         system_quantity: adjustment.system_quantity.toString(),
@@ -186,7 +189,7 @@ export default function Adjustments() {
       setEditingAdjustment(null);
       setFormData({
         adjustment_number: `ADJ-${Date.now()}`,
-        product: '',
+        product: 0,
         location: '',
         counted_quantity: '',
         system_quantity: '',
@@ -207,15 +210,34 @@ export default function Adjustments() {
       toast.error('Please fix stock validation error before submitting');
       return;
     }
+    
+    // Validate required fields
+    if (!formData.product || formData.product === 0) {
+      toast.error('Product is required');
+      return;
+    }
+    if (!formData.location || formData.location.trim() === '') {
+      toast.error('Location is required');
+      return;
+    }
+    if (!formData.counted_quantity || formData.counted_quantity.trim() === '' || parseFloat(formData.counted_quantity) < 0) {
+      toast.error('Valid counted quantity is required');
+      return;
+    }
+    if (!formData.reason || formData.reason.trim() === '') {
+      toast.error('Reason is required');
+      return;
+    }
+    
     try {
       const payload = {
         adjustment_number: formData.adjustment_number,
-        product: parseInt(formData.product),
+        product: typeof formData.product === 'string' ? parseInt(formData.product) : formData.product,
         location: parseInt(formData.location),
         counted_quantity: parseFloat(formData.counted_quantity),
         system_quantity: parseFloat(formData.system_quantity),
         reason: formData.reason,
-        notes: formData.notes,
+        notes: formData.notes || undefined,
       };
 
       if (editingAdjustment) {
@@ -230,8 +252,25 @@ export default function Adjustments() {
       fetchData();
     } catch (error: any) {
       console.error('Error saving adjustment:', error);
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data) || 'Failed to save adjustment';
-      toast.error(errorMsg);
+      
+      // Extract detailed error messages from backend
+      let errorMessage = 'Failed to save adjustment';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else {
+          const firstError = Object.entries(errorData)[0];
+          if (firstError) {
+            errorMessage = `${firstError[0]}: ${Array.isArray(firstError[1]) ? firstError[1][0] : firstError[1]}`;
+          }
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -541,19 +580,13 @@ export default function Adjustments() {
                 <div className="grid gap-2">
                   <Label htmlFor="product">Product *</Label>
                   <Select
-                    key={`product-${formData.product}`}
-                    value={formData.product}
+                    value={formData.product ? formData.product.toString() : undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, product: value })
+                      setFormData({ ...formData, product: parseInt(value) })
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select product">
-                        {formData.product && (() => {
-                          const p = products.find(prod => prod.id.toString() === formData.product);
-                          return p ? `${p.name} (${p.sku}) - Stock: ${p.total_stock} ${p.uom_abbreviation}` : 'Select product';
-                        })()}
-                      </SelectValue>
+                      <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
@@ -568,7 +601,7 @@ export default function Adjustments() {
                 <div className="grid gap-2">
                   <Label htmlFor="location">Location *</Label>
                   <Select
-                    value={formData.location}
+                    value={formData.location || undefined}
                     onValueChange={(value) =>
                       setFormData({ ...formData, location: value })
                     }
