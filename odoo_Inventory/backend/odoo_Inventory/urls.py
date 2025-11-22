@@ -10,6 +10,7 @@ urlpatterns = [
     path('products/',include('products.urls'),name = "products"),
     path('stockledger/',include('stock_ledger.urls'),name = "stockledger"),
     path('warehouse/',include('warehouse.urls'),name = "warehouse"),    
+    path("reports/", include("reports.urls")),
 ]
 
 if settings.DEBUG:

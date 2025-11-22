@@ -28,8 +28,8 @@ class Receipt(models.Model):
     reference = models.CharField(
         max_length=50,
         unique=True,
-        blank=True,    # allow blank
-        null=True,     # allow null
+        blank=True,
+        null=True,
         help_text="Auto-generated receipt number"
     )
 
@@ -64,45 +64,63 @@ class Receipt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
     def __str__(self):
         return f"{self.reference} [{self.status}]"
 
 
-    # -----------------------------
-    # AUTO-GENERATE REFERENCE NUMBERS
-    # -----------------------------
+    # -----------------------------------------
+    # SAVE → Auto-Reference + Auto-Validation
+    # -----------------------------------------
     def save(self, *args, **kwargs):
-        is_new = self.pk is None  # Only generate on creation
+        is_new = self.pk is None
+        previous_status = None
 
-        super().save(*args, **kwargs)  # Save first so lines exist
+        if not is_new:
+            previous_status = Receipt.objects.get(pk=self.pk).status
 
-        if is_new and (not self.reference or self.reference == "auto"):
+        super().save(*args, **kwargs)   # save first so `lines` exist
+
+
+        # -----------------------------------------
+        # AUTO-GENERATE REFERENCE (ONCE)
+        # -----------------------------------------
+        if is_new and not self.reference:
             first_line = self.lines.first()
 
-            if first_line:
-                warehouse_code = first_line.location.warehouse.name[:2].upper()
-            else:
-                warehouse_code = "WH"  # fallback
-
+            warehouse_code = (
+                first_line.location.warehouse.name[:2].upper()
+                if first_line else "WH"
+            )
             operation_code = "IN"
 
             last_id = Receipt.objects.count()
             self.reference = f"{warehouse_code}/{operation_code}/{last_id:03d}"
 
-            super().save(*args, **kwargs)  # Save again with reference
+            super().save(update_fields=["reference"])
 
 
-    # -----------------------------
-    # VALIDATE RECEIPT → POST STOCK MOVEMENTS
-    # -----------------------------
+        # -----------------------------------------
+        # AUTO VALIDATE WHEN STATUS SETS TO DONE
+        # -----------------------------------------
+        if self.status == ReceiptStatus.DONE and self.lines.exists() and (is_new or previous_status != ReceiptStatus.DONE):
+            self.validate()
+
+
+    # -----------------------------------------
+    # VALIDATE → Create Stock Movement Entries
+    # -----------------------------------------
+    
     def validate(self):
-        if self.status == ReceiptStatus.DONE:
-            return  # Avoid duplication
-
         from stock_ledger.models import StockMovement, MovementType
 
+        # If movements already exist for this receipt, skip re-posting
+        if self.status == ReceiptStatus.DONE:
+            # But continue posting movements if they don't exist
+            pass
+
         for line in self.lines.all():
-            StockMovement.objects.create(
+            StockMovement.objects.get_or_create(
                 movement_type=MovementType.RECEIPT,
                 product=line.product,
                 quantity=line.quantity,
@@ -112,8 +130,9 @@ class Receipt(models.Model):
                 document_number=self.reference,
             )
 
-        self.status = ReceiptStatus.DONE
-        self.save()
+        # Mark DONE finally
+        super().save(update_fields=["status"])
+
 
 
 # -----------------------------

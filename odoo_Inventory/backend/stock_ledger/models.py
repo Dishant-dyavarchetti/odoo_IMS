@@ -4,28 +4,24 @@ from products.models import UnitOfMeasure
 from warehouse.models import StockQuant
 from django.core.exceptions import ValidationError
 
-
 User = get_user_model()
 
 
 class MovementType(models.TextChoices):
-    RECEIPT = 'RECEIPT', 'Receipt'              # Goods coming in
-    DELIVERY = 'DELIVERY', 'Delivery'           # Goods going out
-    TRANSFER = 'TRANSFER', 'Internal Transfer'  # Between locations
-    ADJUSTMENT = 'ADJUSTMENT', 'Adjustment'     # Stock correction
-    OPENING = 'OPENING', 'Opening Balance'      # Initial stock load
+    RECEIPT = 'RECEIPT', 'Receipt'
+    DELIVERY = 'DELIVERY', 'Delivery'
+    TRANSFER = 'TRANSFER', 'Internal Transfer'
+    ADJUSTMENT = 'ADJUSTMENT', 'Adjustment'
+    OPENING = 'OPENING', 'Opening Balance'
 
 
 class StockMovement(models.Model):
     """
     Core ledger table: every stock change is recorded here.
-    It does NOT store real-time stock; it represents stock history.
+    Does NOT store current stock balance → history only.
     """
 
-    movement_type = models.CharField(
-        max_length=20,
-        choices=MovementType.choices
-    )
+    movement_type = models.CharField(max_length=20, choices=MovementType.choices)
 
     product = models.ForeignKey(
         'products.Product',
@@ -55,7 +51,6 @@ class StockMovement(models.Model):
         help_text="Positive number. Direction is decided by movement_type."
     )
 
-    # Updated: UOM is now a ForeignKey
     uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
@@ -72,25 +67,15 @@ class StockMovement(models.Model):
         related_name='created_stock_movements'
     )
 
-    document_type = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="e.g. 'RECEIPT', 'DELIVERY', 'TRANSFER'."
-    )
-
-    document_number = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="External or internal reference number."
-    )
-
-    note = models.TextField(
-        blank=True,
-        help_text="Optional remark for this movement."
-    )
+    document_type = models.CharField(max_length=50, blank=True)
+    document_number = models.CharField(max_length=100, blank=True)
+    note = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # 🔥 Prevent recursion for auto-generated transfer entries
+    is_auto = models.BooleanField(default=False, editable=False)
 
 
     class Meta:
@@ -106,9 +91,11 @@ class StockMovement(models.Model):
         return f"{self.movement_type} | {self.product} | {self.quantity} {self.uom}"
 
 
-    # Helper properties
+    # --------------------------
+    # PROPERTIES
+    # --------------------------
     @property
-    def is_inbound(self) -> bool:
+    def is_inbound(self):
         return self.movement_type in {
             MovementType.RECEIPT,
             MovementType.TRANSFER,
@@ -117,7 +104,7 @@ class StockMovement(models.Model):
         }
 
     @property
-    def is_outbound(self) -> bool:
+    def is_outbound(self):
         return self.movement_type in {
             MovementType.DELIVERY,
             MovementType.TRANSFER,
@@ -125,9 +112,10 @@ class StockMovement(models.Model):
         }
 
 
+    # --------------------------
+    # VALIDATION RULES
+    # --------------------------
     def clean(self):
-        """Validations to keep ledger consistent."""
-        from django.core.exceptions import ValidationError
 
         if self.quantity <= 0:
             raise ValidationError("Quantity must be a positive value.")
@@ -141,7 +129,8 @@ class StockMovement(models.Model):
 
         if self.movement_type == MovementType.DELIVERY and not self.source_location:
             raise ValidationError("Delivery requires source location.")
-        
+
+        # 🔥 Prevent negative outbound without stock
         if self.is_outbound and self.source_location:
             current_stock = StockQuant.objects.filter(
                 product=self.product,
@@ -157,9 +146,48 @@ class StockMovement(models.Model):
                 )
 
 
+    # --------------------------
+    # SAVE (+ TRANSFER LOGIC)
+    # --------------------------
     def save(self, *args, **kwargs):
-        # Automatically assign UOM based on Product if not provided
+
+        # Auto assign UOM if missing
         if not self.uom and self.product:
             self.uom = self.product.uom
 
         super().save(*args, **kwargs)
+
+        # 🔥 AUTO-CREATE IN + OUT ENTRIES FOR TRANSFER
+        from stock_ledger.models import MovementType
+
+        if (
+            self.movement_type == MovementType.TRANSFER
+            and not self.is_auto
+            and self.source_location
+            and self.destination_location
+        ):
+            # OUT MOVEMENT
+            StockMovement.objects.create(
+                movement_type=MovementType.TRANSFER,
+                product=self.product,
+                quantity=self.quantity,   # direction is outbound
+                source_location=self.source_location,
+                document_type=self.document_type,
+                document_number=self.document_number,
+                created_by=self.created_by,
+                uom=self.uom,
+                is_auto=True
+            )
+
+            # IN MOVEMENT
+            StockMovement.objects.create(
+                movement_type=MovementType.TRANSFER,
+                product=self.product,
+                quantity=self.quantity,   # inbound entry
+                destination_location=self.destination_location,
+                document_type=self.document_type,
+                document_number=self.document_number,
+                created_by=self.created_by,
+                uom=self.uom,
+                is_auto=True
+            )

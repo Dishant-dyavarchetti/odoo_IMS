@@ -1,38 +1,39 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from warehouse.models import Location
+from receipts.models import Vendor  # or Customer model if separate
 
 User = get_user_model()
 
 
+# -----------------------------
+# STATUS FLOW: DRAFT → READY → DONE
+# -----------------------------
 class DeliveryStatus(models.TextChoices):
-    DRAFT = "DRAFT", "Draft"                 # Created but not confirmed
-    WAITING = "WAITING", "Waiting for Stock" # Out of stock
-    READY = "READY", "Ready to Deliver"      # Stock available
-    DONE = "DONE", "Delivered"               # Movement posted
+    DRAFT = "DRAFT", "Draft"
+    READY = "READY", "Ready"
+    DONE = "DONE", "Done"
 
 
 class Delivery(models.Model):
     reference = models.CharField(
         max_length=50,
         unique=True,
+        blank=True,
+        null=True,
         help_text="Auto-generated delivery number"
     )
 
-    delivery_address = models.CharField(
-        max_length=200,
-        help_text="Where the goods are delivered"
-    )
-
-    operation_type = models.CharField(
-        max_length=50,
-        default="Customer Delivery",
-        help_text="Customer / Internal Transfer / Disposal"
-    )
-
-    schedule_date = models.DateField(
+    deliver_to = models.ForeignKey(
+        Vendor,
+        on_delete=models.PROTECT,
+        related_name="deliveries",
         null=True,
         blank=True
     )
+
+
+    schedule_date = models.DateField(null=True, blank=True)
 
     responsible = models.ForeignKey(
         User,
@@ -57,33 +58,37 @@ class Delivery(models.Model):
         return f"{self.reference} [{self.status}]"
 
 
+    # -----------------------------
+    # SAVE + AUTO-GENERATE REF + STATUS TRIGGER
+    # -----------------------------
     def save(self, *args, **kwargs):
         is_new = self.pk is None
+        old_status = None
+
+        if not is_new:
+            old_status = Delivery.objects.get(pk=self.pk).status
 
         super().save(*args, **kwargs)
 
-        if is_new and (not self.reference or self.reference == "auto"):
+        # Generate reference once lines are saved
+        if is_new and not self.reference:
             first_line = self.lines.first()
-            if first_line:
-                warehouse_code = first_line.location.warehouse.name[:2].upper()
-            else:
-                warehouse_code = "WH"
-
+            warehouse_code = first_line.location.warehouse.name[:2].upper() if first_line else "WH"
             operation_code = "OUT"
-            last_id = Delivery.objects.count()
+            new_id = Delivery.objects.count()
 
-            self.reference = f"{warehouse_code}/{operation_code}/{last_id:03d}"
+            self.reference = f"{warehouse_code}/{operation_code}/{new_id:03d}"
+            super().save(update_fields=["reference"])
 
-            super().save(*args, **kwargs)
+        # Auto-validate when newly created as DONE or status transitions to DONE
+        if self.status == DeliveryStatus.DONE and (is_new or old_status != DeliveryStatus.DONE):
+            self.validate()
 
 
+    # -----------------------------
+    # VALIDATE DELIVERY → CREATE STOCK MOVEMENTS
+    # -----------------------------
     def validate(self):
-        """
-        Validate → Create StockMovement → Set status DONE
-        """
-        if self.status == DeliveryStatus.DONE:
-            return
-        
         from stock_ledger.models import StockMovement, MovementType
 
         for line in self.lines.all():
@@ -97,16 +102,17 @@ class Delivery(models.Model):
                 document_number=self.reference,
             )
 
-        self.status = DeliveryStatus.DONE
-        self.save()
+        super().save(update_fields=["status"])
 
 
-
+# -----------------------------
+# DELIVERY LINE ITEMS
+# -----------------------------
 class DeliveryLine(models.Model):
     delivery = models.ForeignKey(
         Delivery,
         on_delete=models.CASCADE,
-        related_name='lines'
+        related_name="lines"
     )
 
     product = models.ForeignKey(
@@ -116,8 +122,7 @@ class DeliveryLine(models.Model):
 
     location = models.ForeignKey(
         "warehouse.Location",
-        on_delete=models.PROTECT,
-        help_text="Stock will be deducted from this location"
+        on_delete=models.PROTECT
     )
 
     quantity = models.DecimalField(

@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'warehouse.apps.WarehouseConfig',
     'receipts.apps.ReceiptsConfig',
     'deliveries.apps.DeliveriesConfig',
+    'adjustments.apps.AdjustmentsConfig',
+    'reports.apps.ReportsConfig',
 ]
 
 
