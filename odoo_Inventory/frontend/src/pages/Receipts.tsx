@@ -512,6 +512,16 @@ export default function Receipts() {
                       {receipt.status === 'DRAFT' && (
                         <>
                           <button
+                            onClick={() => {
+                              setViewReceipt(receipt);
+                              setShowViewDialog(true);
+                            }}
+                            className="text-purple-600 hover:text-purple-900 mr-3"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleValidate(receipt.id)}
                             className="text-green-600 hover:text-green-900 mr-3"
                             title="Validate"
@@ -789,6 +799,26 @@ export default function Receipts() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      <ViewDialog
+        open={showViewDialog}
+        onOpenChange={setShowViewDialog}
+        title="Receipt Details"
+        data={viewReceipt || {}}
+        fields={[
+          { label: 'Receipt Number', key: 'receipt_number' },
+          { label: 'Supplier', key: 'supplier_name' },
+          { label: 'Supplier Reference', key: 'supplier_reference' },
+          { label: 'Destination Location', key: 'destination_location_name' },
+          { label: 'Expected Date', key: 'expected_date', format: (value) => value ? new Date(value).toLocaleDateString() : 'N/A' },
+          { label: 'Status', key: 'status' },
+          { label: 'Responsible', key: 'responsible_name' },
+          { label: 'Notes', key: 'notes' },
+          { label: 'Created By', key: 'created_by_username' },
+          { label: 'Created At', key: 'created_at', format: (value) => value ? new Date(value).toLocaleString() : 'N/A' },
+        ]}
+      />
     </div>
   );
 }

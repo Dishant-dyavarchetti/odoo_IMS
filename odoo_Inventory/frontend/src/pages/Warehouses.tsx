@@ -299,6 +299,16 @@ export default function Warehouses() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => {
+                          setViewWarehouse(warehouse);
+                          setShowViewWarehouseDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenWarehouseDialog(warehouse)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
@@ -376,6 +386,16 @@ export default function Warehouses() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => {
+                          setViewLocation(location);
+                          setShowViewLocationDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleOpenLocationDialog(location)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
@@ -565,6 +585,38 @@ export default function Warehouses() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Warehouse Dialog */}
+      {viewWarehouse && (
+        <ViewDialog
+          open={showViewWarehouseDialog}
+          onOpenChange={setShowViewWarehouseDialog}
+          title={`Warehouse: ${viewWarehouse.name}`}
+          data={viewWarehouse}
+          fields={[
+            { label: 'Code', key: 'code' },
+            { label: 'Name', key: 'name' },
+            { label: 'Address', key: 'address' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+          ]}
+        />
+      )}
+
+      {/* View Location Dialog */}
+      {viewLocation && (
+        <ViewDialog
+          open={showViewLocationDialog}
+          onOpenChange={setShowViewLocationDialog}
+          title={`Location: ${viewLocation.name}`}
+          data={viewLocation}
+          fields={[
+            { label: 'Name', key: 'name' },
+            { label: 'Warehouse', key: 'warehouse_name' },
+            { label: 'Location Type', key: 'location_type' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+          ]}
+        />
+      )}
     </div>
   );
 }

@@ -531,6 +531,16 @@ export default function Users() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
+                        onClick={() => {
+                          setViewUser(user);
+                          setShowViewDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenDialog(user)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Edit User"
@@ -755,6 +765,26 @@ export default function Users() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      {viewUser && (
+        <ViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          title={`User: ${viewUser.username}`}
+          data={viewUser}
+          fields={[
+            { label: 'Username', key: 'username' },
+            { label: 'Email', key: 'email' },
+            { label: 'First Name', key: 'first_name' },
+            { label: 'Last Name', key: 'last_name' },
+            { label: 'Role', key: 'role' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+            { label: 'Created At', key: 'created_at', format: (val) => new Date(val).toLocaleString() },
+            { label: 'Last Login', key: 'last_login', format: (val) => val ? new Date(val).toLocaleString() : 'Never' },
+          ]}
+        />
+      )}
     </div>
   );
 }

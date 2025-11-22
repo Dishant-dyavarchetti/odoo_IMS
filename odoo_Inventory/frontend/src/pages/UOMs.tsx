@@ -338,6 +338,16 @@ export default function UOMs() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => {
+                          setViewUOM(uom);
+                          setShowViewDialog(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenDialog(uom)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
@@ -446,6 +456,23 @@ export default function UOMs() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      {viewUOM && (
+        <ViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          title={`Unit of Measure: ${viewUOM.name}`}
+          data={viewUOM}
+          fields={[
+            { label: 'Name', key: 'name' },
+            { label: 'Abbreviation', key: 'abbreviation' },
+            { label: 'Description', key: 'description' },
+            { label: 'Active', key: 'is_active', format: (val) => val ? 'Yes' : 'No' },
+            { label: 'Created At', key: 'created_at', format: (val) => new Date(val).toLocaleString() },
+          ]}
+        />
+      )}
     </div>
   );
 }

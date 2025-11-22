@@ -234,12 +234,15 @@ export default function MoveHistory() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {movements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     No stock movements found
                   </td>
                 </tr>
@@ -276,6 +279,18 @@ export default function MoveHistory() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {movement.created_by}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setViewMovement(movement);
+                          setShowViewDialog(true);
+                        }}
+                        className="text-purple-600 hover:text-purple-900"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -294,6 +309,25 @@ export default function MoveHistory() {
           />
         </div>
       </div>
+
+      {/* View Dialog */}
+      <ViewDialog
+        open={showViewDialog}
+        onOpenChange={setShowViewDialog}
+        title="Movement Details"
+        data={viewMovement || {}}
+        fields={[
+          { label: 'Product', key: 'product_name' },
+          { label: 'SKU', key: 'product_sku' },
+          { label: 'Movement Type', key: 'movement_type' },
+          { label: 'Quantity', key: 'quantity' },
+          { label: 'From Location', key: 'source_location' },
+          { label: 'To Location', key: 'destination_location' },
+          { label: 'Reference', key: 'document_reference' },
+          { label: 'Created By', key: 'created_by' },
+          { label: 'Created At', key: 'created_at', format: (value) => value ? new Date(value).toLocaleString() : 'N/A' },
+        ]}
+      />
     </div>
   );
 }

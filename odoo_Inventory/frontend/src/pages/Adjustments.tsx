@@ -514,6 +514,16 @@ export default function Adjustments() {
                       {adjustment.status === 'DRAFT' && (
                         <>
                           <button
+                            onClick={() => {
+                              setViewAdjustment(adjustment);
+                              setShowViewDialog(true);
+                            }}
+                            className="text-purple-600 hover:text-purple-900 mr-3"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleValidate(adjustment.id)}
                             className="text-green-600 hover:text-green-900 mr-3"
                             title="Validate"
@@ -721,6 +731,27 @@ export default function Adjustments() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      <ViewDialog
+        open={showViewDialog}
+        onOpenChange={setShowViewDialog}
+        title="Adjustment Details"
+        data={viewAdjustment || {}}
+        fields={[
+          { label: 'Adjustment Number', key: 'adjustment_number' },
+          { label: 'Product', key: 'product_name' },
+          { label: 'Location', key: 'location_name' },
+          { label: 'Counted Quantity', key: 'counted_quantity' },
+          { label: 'System Quantity', key: 'system_quantity' },
+          { label: 'Difference', key: 'difference' },
+          { label: 'Reason', key: 'reason' },
+          { label: 'Status', key: 'status' },
+          { label: 'Notes', key: 'notes' },
+          { label: 'Created By', key: 'created_by_username' },
+          { label: 'Created At', key: 'created_at', format: (value) => value ? new Date(value).toLocaleString() : 'N/A' },
+        ]}
+      />
     </div>
   );
 }

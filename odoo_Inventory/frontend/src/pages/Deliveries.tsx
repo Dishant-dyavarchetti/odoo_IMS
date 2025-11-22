@@ -564,6 +564,16 @@ export default function Deliveries() {
                       {delivery.status === 'DRAFT' && (
                         <>
                           <button
+                            onClick={() => {
+                              setViewDelivery(delivery);
+                              setShowViewDialog(true);
+                            }}
+                            className="text-gray-600 hover:text-gray-900 mr-3"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleValidate(delivery.id)}
                             className="text-green-600 hover:text-green-900 mr-3"
                             title="Validate"
@@ -855,6 +865,29 @@ export default function Deliveries() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+      {viewDelivery && (
+        <ViewDialog
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+          title={`Delivery: ${viewDelivery.delivery_number}`}
+          data={viewDelivery}
+          fields={[
+            { label: 'Delivery Number', key: 'delivery_number' },
+            { label: 'Customer Name', key: 'customer_name' },
+            { label: 'Customer Reference', key: 'customer_reference' },
+            { label: 'Source Location', key: 'source_location_name' },
+            { label: 'Shipping Address', key: 'shipping_address' },
+            { label: 'Scheduled Date', key: 'scheduled_date', format: (val) => new Date(val).toLocaleDateString() },
+            { label: 'Status', key: 'status' },
+            { label: 'Responsible', key: 'responsible_name' },
+            { label: 'Notes', key: 'notes' },
+            { label: 'Created By', key: 'created_by_username' },
+            { label: 'Created At', key: 'created_at', format: (val) => new Date(val).toLocaleString() },
+          ]}
+        />
+      )}
     </div>
   );
 }
