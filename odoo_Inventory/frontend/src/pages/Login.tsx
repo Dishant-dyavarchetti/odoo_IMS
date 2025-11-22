@@ -15,10 +15,14 @@ const Login: React.FC = () => {
         e.preventDefault();
         // Add your login logic here
         console.log('Login:', { email, password, rememberMe });
+
+        // Simulate successful login
+        localStorage.setItem('authToken', 'demo-token');
+        navigate('/dashboard');
     };
 
     return (
-        <div className="w-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex">
                 {/* Left Side - Form */}
                 <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16">
@@ -28,7 +32,7 @@ const Login: React.FC = () => {
                         <p className="text-gray-500 text-lg">See your growth and get support!</p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6">
+                    <form onSubmit={handleLogin} className="input:text-black space-y-6">
                         {/* Email Input */}
                         <div className="space-y-2">
                             <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
@@ -40,7 +44,7 @@ const Login: React.FC = () => {
                                 placeholder="Enter your email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-12 text-black border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 required
                             />
                         </div>
@@ -56,7 +60,7 @@ const Login: React.FC = () => {
                                 placeholder="minimum 8 characters"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-12 text-black border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 required
                                 minLength={8}
                             />
@@ -96,9 +100,13 @@ const Login: React.FC = () => {
                         {/* Sign Up Link */}
                         <p className="text-center text-sm text-gray-600">
                             Not registered yet?{' '}
-                            <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/register')}
+                                className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                            >
                                 Create a new account
-                            </a>
+                            </button>
                         </p>
                     </form>
                 </div>

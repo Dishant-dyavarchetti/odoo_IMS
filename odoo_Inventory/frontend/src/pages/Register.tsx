@@ -35,7 +35,7 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-row-reverse">
                 {/* Right Side - Form */}
                 <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16">
