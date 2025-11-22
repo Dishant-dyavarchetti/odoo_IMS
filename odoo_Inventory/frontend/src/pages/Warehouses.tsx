@@ -3,6 +3,7 @@ import { warehousesAPI } from '@/services/api';
 import { toast } from 'react-toastify';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
   DialogContent,

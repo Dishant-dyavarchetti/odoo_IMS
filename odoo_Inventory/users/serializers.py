@@ -6,10 +6,36 @@ from .models import User, OTPVerification
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
+    password_confirm = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'is_active', 'created_at']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'is_active', 'created_at', 'password', 'password_confirm']
         read_only_fields = ['id', 'created_at']
+    
+    def validate(self, data):
+        # If password is provided, validate it
+        if 'password' in data:
+            if 'password_confirm' not in data:
+                raise serializers.ValidationError({"password_confirm": "Password confirmation is required"})
+            if data['password'] != data['password_confirm']:
+                raise serializers.ValidationError({"password": "Passwords do not match"})
+        return data
+    
+    def create(self, validated_data):
+        validated_data.pop('password_confirm', None)
+        password = validated_data.pop('password', None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        return user
+    
+    def update(self, instance, validated_data):
+        validated_data.pop('password', None)
+        validated_data.pop('password_confirm', None)
+        return super().update(instance, validated_data)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

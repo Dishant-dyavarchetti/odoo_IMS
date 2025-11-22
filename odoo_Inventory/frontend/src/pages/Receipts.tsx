@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Plus, Search, Edit, Trash2, CheckCircle, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
+import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,10 @@ interface Product {
   id: number;
   name: string;
   sku: string;
+  cost_price: number;
+  selling_price: number;
+  total_stock: number;
+  uom_abbreviation: string;
 }
 
 interface Location {
@@ -69,7 +74,7 @@ export default function Receipts() {
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState('');
-  const [ordering, setOrdering] = useState('-receipt_date');
+  const [ordering, setOrdering] = useState('-created_at');
 
   const [formData, setFormData] = useState({
     receipt_number: '',
@@ -136,7 +141,7 @@ export default function Receipts() {
   
   const handleResetFilters = () => {
     setStatusFilter('');
-    setOrdering('-receipt_date');
+    setOrdering('-created_at');
     setSearchTerm('');
     setCurrentPage(1);
   };
@@ -340,12 +345,12 @@ export default function Receipts() {
                   <SelectValue placeholder="Sort by..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="-receipt_date">Receipt Date (Newest)</SelectItem>
-                  <SelectItem value="receipt_date">Receipt Date (Oldest)</SelectItem>
+                  <SelectItem value="-created_at">Date Created (Newest)</SelectItem>
+                  <SelectItem value="created_at">Date Created (Oldest)</SelectItem>
+                  <SelectItem value="-expected_date">Expected Date (Newest)</SelectItem>
+                  <SelectItem value="expected_date">Expected Date (Oldest)</SelectItem>
                   <SelectItem value="receipt_number">Receipt # (A-Z)</SelectItem>
                   <SelectItem value="-receipt_number">Receipt # (Z-A)</SelectItem>
-                  <SelectItem value="supplier">Supplier (A-Z)</SelectItem>
-                  <SelectItem value="-supplier">Supplier (Z-A)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -599,9 +604,13 @@ export default function Receipts() {
                         <Label className="text-xs">Product</Label>
                         <Select
                           value={line.product}
-                          onValueChange={(value) =>
-                            updateItem(index, 'product', value)
-                          }
+                          onValueChange={(value) => {
+                            const selectedProduct = products.find(p => p.id.toString() === value);
+                            updateItem(index, 'product', value);
+                            if (selectedProduct) {
+                              updateItem(index, 'unit_price', selectedProduct.cost_price.toString());
+                            }
+                          }}
                         >
                           <SelectTrigger className="h-9">
                             <SelectValue placeholder="Select product" />
@@ -609,7 +618,7 @@ export default function Receipts() {
                           <SelectContent>
                             {products.map((p) => (
                               <SelectItem key={p.id} value={p.id.toString()}>
-                                {p.name}
+                                {p.name} ({p.sku}) - Stock: {p.total_stock} {p.uom_abbreviation}
                               </SelectItem>
                             ))}
                           </SelectContent>

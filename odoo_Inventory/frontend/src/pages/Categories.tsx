@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
+import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
   DialogContent,

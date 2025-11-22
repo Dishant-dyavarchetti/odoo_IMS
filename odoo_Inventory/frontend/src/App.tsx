@@ -16,6 +16,7 @@ import Transfers from './pages/Transfers';
 import Adjustments from './pages/Adjustments';
 import MoveHistory from './pages/MoveHistory';
 import Settings from './pages/Settings';
+import Users from './pages/Users';
 
 function App() {
   return (
@@ -133,6 +134,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Settings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Users />
                 </Layout>
               </ProtectedRoute>
             }

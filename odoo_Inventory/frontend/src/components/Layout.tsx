@@ -16,40 +16,16 @@ import {
   FolderTree,
   Ruler,
   Database,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { authAPI } from '@/services/api';
+import { canAccess } from '@/utils/permissions';
 
 interface LayoutProps {
   children: ReactNode;
 }
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
-  {
-    name: 'Master Data',
-    icon: Database,
-    children: [
-      { name: 'Categories', href: '/categories', icon: FolderTree },
-      { name: 'UOMs', href: '/uoms', icon: Ruler },
-    ],
-  },
-  {
-    name: 'Operations',
-    icon: ClipboardList,
-    children: [
-      { name: 'Receipts', href: '/receipts', icon: ArrowDownToLine },
-      { name: 'Deliveries', href: '/deliveries', icon: ArrowUpFromLine },
-      { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft },
-      { name: 'Adjustments', href: '/adjustments', icon: ClipboardList },
-    ],
-  },
-  { name: 'Move History', href: '/move-history', icon: History },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
@@ -58,6 +34,36 @@ export default function Layout({ children }: LayoutProps) {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'ADMIN';
+
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'VIEW_DASHBOARD' as const },
+    { name: 'Products', href: '/products', icon: Package, permission: 'VIEW_PRODUCTS' as const },
+    { name: 'Warehouses', href: '/warehouses', icon: Warehouse, permission: 'VIEW_WAREHOUSES' as const },
+    {
+      name: 'Master Data',
+      icon: Database,
+      permission: 'VIEW_CATEGORIES' as const,
+      children: [
+        { name: 'Categories', href: '/categories', icon: FolderTree, permission: 'VIEW_CATEGORIES' as const },
+        { name: 'UOMs', href: '/uoms', icon: Ruler, permission: 'VIEW_UOMS' as const },
+      ],
+    },
+    {
+      name: 'Operations',
+      icon: ClipboardList,
+      permission: 'VIEW_RECEIPTS' as const,
+      children: [
+        { name: 'Receipts', href: '/receipts', icon: ArrowDownToLine, permission: 'VIEW_RECEIPTS' as const },
+        { name: 'Deliveries', href: '/deliveries', icon: ArrowUpFromLine, permission: 'VIEW_DELIVERIES' as const },
+        { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, permission: 'VIEW_TRANSFERS' as const },
+        { name: 'Adjustments', href: '/adjustments', icon: ClipboardList, permission: 'VIEW_ADJUSTMENTS' as const },
+      ],
+    },
+    { name: 'Move History', href: '/move-history', icon: History, permission: 'VIEW_MOVE_HISTORY' as const },
+    ...(isAdmin ? [{ name: 'Users', href: '/users', icon: Users, permission: 'VIEW_USERS' as const }] : []),
+    { name: 'Settings', href: '/settings', icon: Settings, permission: 'VIEW_SETTINGS' as const },
+  ].filter(item => canAccess(item.permission));
 
   const handleLogout = async () => {
     try {
@@ -109,7 +115,7 @@ export default function Layout({ children }: LayoutProps) {
                     </button>
                     {isExpanded && (
                       <div className="ml-4 space-y-1">
-                        {item.children.map((child) => (
+                        {item.children.filter((child: any) => canAccess(child.permission)).map((child: any) => (
                           <Link
                             key={child.name}
                             to={child.href}

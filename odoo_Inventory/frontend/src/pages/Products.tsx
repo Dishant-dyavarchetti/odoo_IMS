@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Plus, Search, Edit, Trash2, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Pagination from '@/components/Pagination';
+import { PermissionGuard } from '@/components/PermissionGuard';
 import {
   Dialog,
   DialogContent,
@@ -252,10 +253,12 @@ export default function Products() {
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600">Manage your product catalog</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        <PermissionGuard permission="CREATE_PRODUCT">
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Search and Filters */}
@@ -476,18 +479,22 @@ export default function Products() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleOpenDialog(product)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <PermissionGuard permission="EDIT_PRODUCT">
+                        <button
+                          onClick={() => handleOpenDialog(product)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permission="DELETE_PRODUCT">
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
                     </td>
                   </tr>
                 ))

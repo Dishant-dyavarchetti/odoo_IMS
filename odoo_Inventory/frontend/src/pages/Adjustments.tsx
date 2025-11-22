@@ -23,28 +23,32 @@ import {
 interface Adjustment {
   id: number;
   adjustment_number: string;
-  adjustment_date: string;
+  location: number;
+  location_code?: string;
+  product: number;
+  product_sku?: string;
+  product_name?: string;
+  system_quantity: number;
+  counted_quantity: number;
+  adjustment_quantity: number;
   reason: string;
   status: string;
   notes: string;
-  created_by_name: string;
-  validated_by_name: string | null;
-  items: AdjustmentItem[];
-}
-
-interface AdjustmentItem {
-  id?: number;
-  product: number;
-  product_name?: string;
-  location: number;
-  location_name?: string;
-  counted_quantity: number;
-  system_quantity: number;
+  created_by_username: string;
+  validated_by_username: string | null;
+  created_at: string;
+  updated_at: string;
+  validated_at: string | null;
 }
 
 interface Product {
   id: number;
   name: string;
+  sku: string;
+  cost_price: number;
+  selling_price: number;
+  total_stock: number;
+  uom_abbreviation: string;
 }
 
 interface Location {
@@ -146,12 +150,12 @@ export default function Adjustments() {
       setEditingAdjustment(adjustment);
       setFormData({
         adjustment_number: adjustment.adjustment_number,
-        product: adjustment.items[0]?.product.toString() || '',
-        location: adjustment.items[0]?.location.toString() || '',
-        counted_quantity: adjustment.items[0]?.counted_quantity.toString() || '',
-        system_quantity: adjustment.items[0]?.system_quantity.toString() || '',
+        product: adjustment.product.toString(),
+        location: adjustment.location.toString(),
+        counted_quantity: adjustment.counted_quantity.toString(),
+        system_quantity: adjustment.system_quantity.toString(),
         reason: adjustment.reason,
-        notes: adjustment.notes,
+        notes: adjustment.notes || '',
       });
     } else {
       setEditingAdjustment(null);
@@ -386,6 +390,9 @@ export default function Adjustments() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reason
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -402,7 +409,7 @@ export default function Adjustments() {
             <tbody className="bg-white divide-y divide-gray-200">
               {adjustments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                     No adjustments found
                   </td>
                 </tr>
@@ -413,7 +420,10 @@ export default function Adjustments() {
                       {adjustment.adjustment_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(adjustment.adjustment_date).toLocaleDateString()}
+                      {new Date(adjustment.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {adjustment.product_name || `Product #${adjustment.product}`}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {adjustment.reason}
@@ -428,7 +438,7 @@ export default function Adjustments() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {adjustment.created_by_name}
+                      {adjustment.created_by_username}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {adjustment.status === 'DRAFT' && (
@@ -464,8 +474,9 @@ export default function Adjustments() {
         {totalItems > 0 && (
           <Pagination
             currentPage={currentPage}
+            totalPages={Math.ceil(totalItems / pageSize)}
             totalItems={totalItems}
-            pageSize={pageSize}
+            itemsPerPage={pageSize}
             onPageChange={setCurrentPage}
           />
         )}
@@ -510,7 +521,7 @@ export default function Adjustments() {
                     <SelectContent>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={p.id.toString()}>
-                          {p.name}
+                          {p.name} ({p.sku}) - Stock: {p.total_stock} {p.uom_abbreviation}
                         </SelectItem>
                       ))}
                     </SelectContent>

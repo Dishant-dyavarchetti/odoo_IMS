@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 import {
   Package,
   AlertTriangle,
-  TrendingUp,
   ArrowDownToLine,
   ArrowUpFromLine,
   ArrowRightLeft,

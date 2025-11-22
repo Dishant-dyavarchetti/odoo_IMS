@@ -48,6 +48,13 @@ export const authAPI = {
     api.post('/users/request_password_reset/', { email }),
   verifyPasswordReset: (email: string, otp: string, new_password: string) =>
     api.post('/users/verify_password_reset/', { email, otp, new_password }),
+  // User Management (Admin only)
+  getUsers: (params?: any) => api.get('/users/', { params }),
+  getUser: (id: number) => api.get(`/users/${id}/`),
+  createUser: (data: any) => api.post('/users/', data),
+  updateUser: (id: number, data: any) => api.patch(`/users/${id}/`, data),
+  deleteUser: (id: number) => api.delete(`/users/${id}/`),
+  resetUserPassword: (id: number, data: any) => api.post(`/users/${id}/reset_password/`, data),
 };
 
 // Products APIs
