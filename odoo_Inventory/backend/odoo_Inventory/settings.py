@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'stock_ledger.apps.StockLedgerConfig',
     'products.apps.ProductsConfig',
     'warehouse.apps.WarehouseConfig',
+    'receipts.apps.ReceiptsConfig',
+    'deliveries.apps.DeliveriesConfig',
 ]
 
 
