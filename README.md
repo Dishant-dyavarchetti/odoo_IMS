@@ -171,11 +171,6 @@ odoo_IMS/
     ├── manage.py                # Django management script
     │
     ├── odoo_Inventory/          # Project settings
-    │   ├── settings.py          # Django configuration
-    │   ├── urls.py              # Main URL routing
-    │   ├── wsgi.py              # WSGI application
-    │   └── asgi.py              # ASGI application
-    │
     ├── users/                   # User management app
     ├── products/                # Product & category management
     ├── warehouse/               # Warehouse & location management
@@ -190,43 +185,7 @@ odoo_IMS/
     ├── static/                  # Static files (CSS, JS)
     │
     └── frontend/                # React application
-        ├── src/
-        │   ├── components/      # Reusable UI components
-        │   │   ├── Layout.tsx
-        │   │   ├── Sidebar.tsx
-        │   │   ├── Header.tsx
-        │   │   ├── Pagination.tsx
-        │   │   ├── PermissionGuard.tsx
-        │   │   ├── ProtectedRoutes.tsx
-        │   │   ├── ViewDialog.tsx
-        │   │   └── ui/          # Shadcn UI components
-        │   │
-        │   ├── pages/           # Application pages
-        │   │   ├── Login.tsx
-        │   │   ├── Register.tsx
-        │   │   ├── Dashboard.tsx
-        │   │   ├── Products.tsx
-        │   │   ├── Categories.tsx
-        │   │   ├── UOMs.tsx
-        │   │   ├── Warehouses.tsx
-        │   │   ├── Receipts.tsx
-        │   │   ├── Deliveries.tsx
-        │   │   ├── Transfers.tsx
-        │   │   ├── Adjustments.tsx
-        │   │   ├── MoveHistory.tsx
-        │   │   └── Users.tsx
-        │   │
-        │   ├── lib/             # Utilities
-        │   ├── assets/          # Images and static assets
-        │   ├── App.tsx          # Main app component
-        │   └── main.tsx         # Application entry point
-        │
-        ├── public/              # Public assets
-        ├── package.json         # Node dependencies
-        ├── vite.config.ts       # Vite configuration
-        ├── tsconfig.json        # TypeScript configuration
-        └── tailwind.config.js   # Tailwind CSS configuration
-```
+  ```
 
 ---
 
