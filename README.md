@@ -405,6 +405,8 @@ This project is licensed under the MIT License.
 
 **Dishant Dyavarchetti**
 - GitHub: [@Dishant-dyavarchetti](https://github.com/Dishant-dyavarchetti)
+- GitHub: [@Rohit-Solanki-6105](https://github.com/Rohit-Solanki-6105)
+- GitHub: [@modiparshva](https://github.com/modiparshva)
 
 ---
 
