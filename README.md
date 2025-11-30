@@ -403,10 +403,9 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**Dishant Dyavarchetti**
-- GitHub: [@Dishant-dyavarchetti](https://github.com/Dishant-dyavarchetti)
-- GitHub: [@Rohit-Solanki-6105](https://github.com/Rohit-Solanki-6105)
-- GitHub: [@modiparshva](https://github.com/modiparshva)
+- Dishant Dyavarchetti: [@Dishant-dyavarchetti](https://github.com/Dishant-dyavarchetti)
+- Rohit Solanki: [@Rohit-Solanki-6105](https://github.com/Rohit-Solanki-6105)
+- Parshva Modi: [@modiparshva](https://github.com/modiparshva)
 
 ---
 
@@ -423,7 +422,7 @@ This project is licensed under the MIT License.
 
 For issues or questions:
 - Open an issue on GitHub
-- Contact: [Your Email]
+- [Send Email](mailto:solanki.rohit6105@gmail.com,parshvamodi30@gmail.com,ddishantmsccs2023@gmail.com)
 
 ---
 
